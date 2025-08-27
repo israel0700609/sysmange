@@ -1,18 +1,3 @@
-const canvas = await html2canvas(elementToCapture, {
-    // ...אפשרויות אחרות...
-    width: elementToCapture.scrollWidth,  // תצלם ברוחב המלא של התוכן
-    height: elementToCapture.scrollHeight, // תצלם בגובה המלא של התוכן
-    windowWidth: elementToCapture.scrollWidth,
-    windowHeight: elementToCapture.scrollHeight,
-    // ...
-});
-```זהו התיקון המשמעותי ביותר שאמור לפתור את בעיית החיתוך אחת ולתמיד.
-
-### הקוד המלא והמתוקן (עבור `index.html`)
-
-אנא החלף את כל הקוד בקובץ `index.html` (דף הסיכום) בקוד הבא. זה כולל את הלוגיקה המשופרת לייצוא ה-PDF.
-
-```html
 <!DOCTYPE html>
 <html lang="he">
 <head>
