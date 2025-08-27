@@ -16,7 +16,6 @@
 <style>
 :root {
     --primary-color: #007bff; --light-gray: #f8f9fa; --text-color: #313e4b;
-    --border-color: #dee2e6; --shadow-md: 0 .5rem 1rem rgba(0,0,0,.15);
     --border-radius: 0.5rem; --runner-bg: #28a745; --waiter-hall-bg: #38516d;
     --waiter-terrace-bg: #022346; --hostess-hall-bg: #96009b;
     --hostess-terrace-bg: #ff7fc7; --tastings-bg: #17a2b8;
@@ -27,7 +26,7 @@ body {
 }
 .container {
     max-width: 95%; margin: 0 auto; background-color: #fff;
-    padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-md);
+    padding: 30px; border-radius: var(--border-radius); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
 }
 h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
 .legend {
@@ -41,22 +40,15 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
 }
 .day-column {
     flex: 1 1 220px; background-color: #f2f2f2; padding: 15px;
-    border-radius: var(--border-radius); box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    text-align: center;
+    border-radius: var(--border-radius); text-align: center;
 }
 .day-title {
     font-size: 1.5rem; font-weight: 700;
     margin-bottom: 15px; color: var(--primary-color);
 }
-.day-title .arrival-time {
-    font-weight: 500;
-    color: #555;
-}
+.day-title .arrival-time { font-weight: 500; color: #555; }
 .worker-list { list-style: none; padding: 0; margin: 0; }
-.worker-item {
-    padding: 8px; margin-bottom: 8px; border-radius: 5px;
-    font-weight: 500; color: white;
-}
+.worker-item { padding: 8px; margin-bottom: 8px; border-radius: 5px; font-weight: 500; color: white; }
 .role-runners { background-color: var(--runner-bg); }
 .role-waiters-hall { background-color: var(--waiter-hall-bg); }
 .role-waiters-terrace { background-color: var(--waiter-terrace-bg); }
@@ -67,8 +59,7 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
 .navigation-buttons { text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 15px; }
 .nav-button {
     padding: 12px 25px; font-size: 1.1rem; color: #fff; background-color: var(--primary-color);
-    border: none; border-radius: var(--border-radius); cursor: pointer;
-    text-decoration: none; transition: all 0.2s ease;
+    border: none; border-radius: var(--border-radius); cursor: pointer; text-decoration: none; transition: all 0.2s ease;
 }
 .nav-button:hover { filter: brightness(110%); }
 #export-pdf-btn { background-color: #6c757d; }
@@ -76,6 +67,7 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
 </style>
 </head>
 <body>
+
 <div id="capture">
     <div class="container">
         <h2>סיכום סידור עבודה - לפי ימים</h2>
@@ -88,9 +80,7 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
             <div class="legend-item"><span class="legend-color" style="background-color: var(--hostess-terrace-bg);"></span>מארחת טרסה</div>
         </div>
         <div id="scheduleByDayContainer"></div>
-        <div id="no-data-message">
-            <p>לא נמצא סידור עבודה. יש לחזור לדף הראשי ולשבץ עובדים תחילה.</p>
-        </div>
+        <div id="no-data-message"><p>לא נמצא סידור עבודה. יש לחזור לדף הראשי ולשבץ עובדים תחילה.</p></div>
     </div>
 </div>
 
@@ -141,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let col = 0; col < totalColumns; col++) {
                     const dayColumn = document.createElement('div');
                     dayColumn.className = 'day-column';
-
                     const dayTitle = document.createElement('h3');
                     dayTitle.className = 'day-title';
                     let titleHTML = col === 0 ? day : `${day} - המשך`;
@@ -176,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ==================== ייצוא PDF איכותי, דף אחד ארוך ====================
+// ==================== PDF דף אחד ארוך ====================
 document.getElementById('export-pdf-btn').addEventListener('click', async () => {
     const exportButton = document.getElementById('export-pdf-btn');
     const originalButtonText = exportButton.textContent;
@@ -200,7 +189,7 @@ document.getElementById('export-pdf-btn').addEventListener('click', async () => 
         exportButton.textContent = 'מייצא, נא להמתין...';
 
         const canvas = await html2canvas(cloneForExport, {
-            scale: 4, // איכות גבוהה
+            scale: 4,
             useCORS: true,
             allowTaint: true,
             width: cloneForExport.scrollWidth,
@@ -212,29 +201,28 @@ document.getElementById('export-pdf-btn').addEventListener('click', async () => 
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
 
-        const pdfWidth = 210; // רוחב A4 במ"מ
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pdfWidth = 210; // רוחב PDF במ"מ
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width; // גובה מותאם אישית
 
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
-            format: [pdfWidth, pdfHeight] // דף אחד ארוך
+            format: [pdfWidth, pdfHeight]
         });
 
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save("work-schedule-final.pdf");
 
     } catch (error) {
-        console.error("An error occurred during PDF export:", error);
+        console.error("שגיאה במהלך ייצוא PDF:", error);
         alert("אירעה שגיאה במהלך ייצוא ה-PDF.");
     } finally {
-        if (cloneForExport) {
-            document.body.removeChild(cloneForExport);
-        }
+        if (cloneForExport) document.body.removeChild(cloneForExport);
         exportButton.textContent = originalButtonText;
         exportButton.disabled = false;
     }
 });
 </script>
+
 </body>
 </html>
