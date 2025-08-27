@@ -2,7 +2,7 @@
 <html lang="he">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת שיבוץ עובדים</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -188,16 +188,14 @@
 
 <div class="container">
     <h2>מערכת שיבוץ עובדים</h2>
-    <div id="saveStatus" class="save-status" style="display: none;"></div>
     <div id="loadingMessage" class="loading-message">טוען נתונים...</div>
     <div id="errorMessage" class="error-message" style="display: none;"></div>
-    <p style="text-align: center; font-size: 1.2rem; color: var(--dark-gray);">לחץ על היום הרצוי כדי להתחיל בשיבוץ.</p>
     <table id="daysTable" style="display: none;">
         <thead><tr id="tableHeaders"></tr></thead>
     </table>
     <div id="summaryButtonContainer">
         <button id="summaryButton" class="action-button" onclick="showSummary()">צפייה בסיכום</button>
-        <button id="resetButton" class="action-button" onclick="resetAllAssignments()">התחלת סידור חדש</button>
+        <button id="resetButton" class="action-button" onclick="resetAllData()">התחלת סידור חדש</button>
         <button id="exportButton" class="action-button" onclick="exportData()">ייצוא נתונים</button>
         <div class="file-input-wrapper">
             <button id="importButton" class="action-button" onclick="document.getElementById('importFile').click()">ייבוא נתונים</button>
@@ -250,24 +248,16 @@
 
 <script>
 class WorkScheduleStorage {
-    constructor() {
-        this.STORAGE_KEY = 'workScheduleData';
-        this.BACKUP_KEY = 'workScheduleBackup';
+    constructor(key = 'workScheduleData') {
+        this.STORAGE_KEY = key;
     }
-
-    saveData(assignments, allDaysData) {
+    saveData(data) {
         try {
-            const dataToSave = {
-                assignments: assignments,
-                allDaysData: allDaysData,
-                timestamp: new Date().toISOString()
-            };
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dataToSave));
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
         } catch (error) {
             console.error('שגיאה בשמירת נתונים:', error);
         }
     }
-
     loadData() {
         try {
             const data = localStorage.getItem(this.STORAGE_KEY);
@@ -277,54 +267,14 @@ class WorkScheduleStorage {
             return null;
         }
     }
-
     clearAllData() {
-        try {
-            localStorage.removeItem(this.STORAGE_KEY);
-            return true;
-        } catch (error) {
-            console.error('שגיאה במחיקת נתונים:', error);
-            return false;
-        }
-    }
-
-    exportToFile(assignments, allDaysData) {
-        const dataToExport = {
-            assignments: assignments,
-            allDaysData: allDaysData,
-            exportDate: new Date().toISOString()
-        };
-        const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `work-schedule-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    importFromFile(file, callback) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const importedData = JSON.parse(e.target.result);
-                if (importedData.assignments && importedData.allDaysData) {
-                    callback(importedData);
-                } else {
-                    throw new Error('פורמט קובץ לא תקין');
-                }
-            } catch (error) {
-                console.error('שגיאה בייבוא:', error);
-                alert('שגיאה בייבוא הקובץ - פורמט לא תקין');
-            }
-        };
-        reader.readAsText(file);
+        localStorage.removeItem(this.STORAGE_KEY);
     }
 }
 
 const SHEET_ID = "1_8vucMhNhGViLxDxUFe8XvrwRGBWtBxpieIfP8S24A4";
 const GID = "2089507675";
-const URLS = [`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`];
+const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
 
 let allDaysData = {};
 let assignments = {};
@@ -342,32 +292,30 @@ const showSuccess = () => {
     document.getElementById("daysTable").style.display = "table";
 };
 
-const tryFetchData = async () => {
+const fetchCsvData = async () => {
     try {
-        const response = await fetch(`${URLS[0]}&_=${new Date().getTime()}`); // Cache busting
-        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+        const response = await fetch(`${URL}&_=${new Date().getTime()}`); // Cache-busting
+        if (!response.ok) throw new Error(`תגובת רשת שגויה: ${response.statusText}`);
         return await response.text();
     } catch (error) {
-        console.error("Critical error fetching data:", error);
+        console.error("שגיאה קריטית בקריאת הנתונים:", error);
         throw error;
     }
 };
 
 const parseCsvData = (csvText) => {
     const lines = csvText.trim().split(/\r?\n/);
-    if (lines.length === 0) return { headers: [], freshDaysData: {} };
+    if (lines.length === 0) return { headers: [], data: {} };
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    
-    const freshDaysData = {};
-    headers.forEach(header => { if (header) freshDaysData[header] = []; });
-    
+    const data = {};
+    headers.forEach(header => { if (header) data[header] = []; });
     for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
         headers.forEach((header, index) => {
-            if (header && values[index]) freshDaysData[header].push(values[index]);
+            if (header && values[index]) data[header].push(values[index]);
         });
     }
-    return { headers: headers.filter(h => h), freshDaysData };
+    return { headers: headers.filter(h => h), data };
 };
 
 const renderTable = (headers) => {
@@ -377,21 +325,13 @@ const renderTable = (headers) => {
         const indicator = assignmentCount > 0 ? `<span class="assignment-indicator">${assignmentCount}</span>` : '';
         return `<th data-day="${h}">${h}${indicator}</th>`;
     }).join("");
-    
-    document.querySelectorAll("#daysTable th").forEach(headerCell => {
-        headerCell.addEventListener("click", () => openModal(headerCell.dataset.day));
-    });
+    document.querySelectorAll("#daysTable th").forEach(cell => cell.addEventListener("click", () => openModal(cell.dataset.day)));
 };
 
 const getAssignmentCount = (day) => {
     const dayAssignments = assignments[day];
     if (!dayAssignments) return 0;
-    return (dayAssignments.runners?.length || 0) +
-           (dayAssignments.waiters?.hall?.length || 0) +
-           (dayAssignments.waiters?.terrace?.length || 0) +
-           (dayAssignments.hostess?.hall?.length || 0) +
-           (dayAssignments.hostess?.terrace?.length || 0) +
-           (dayAssignments.tastings?.length || 0);
+    return Object.values(dayAssignments).flat(Infinity).filter(item => typeof item === 'object' && item.name).length;
 };
 
 const initializeApp = async () => {
@@ -400,54 +340,47 @@ const initializeApp = async () => {
     const savedAllDaysData = savedData?.allDaysData || {};
 
     try {
-        const csvText = await tryFetchData();
-        const { headers, freshDaysData } = parseCsvData(csvText);
-        
-        // שלב 1: התחל עם הנתונים הטריים מה-Sheets
-        allDaysData = freshDaysData;
+        const csvText = await fetchCsvData();
+        const { headers, data: sheetData } = parseCsvData(csvText);
+        allDaysData = sheetData;
 
-        // שלב 2: הוסף עובדים ידניים שנשמרו מה-localStorage
-        // עובד ידני הוא עובד שקיים בזיכרון המקומי אך לא ברשימה שהגיעה כרגע מה-Sheets
+        // הוסף עובדים ידניים שנשמרו לאלו שהגיעו מהגיליון
         Object.keys(savedAllDaysData).forEach(day => {
-            if (!allDaysData[day]) allDaysData[day] = []; // צור את היום אם לא קיים
+            if (!allDaysData[day]) allDaysData[day] = [];
             savedAllDaysData[day].forEach(savedWorker => {
-                const isFromSheet = freshDaysData[day]?.includes(savedWorker);
+                const isFromSheet = sheetData[day]?.includes(savedWorker);
                 if (!isFromSheet && !allDaysData[day].includes(savedWorker)) {
                     allDaysData[day].push(savedWorker);
                 }
             });
         });
         
-        renderTable(headers);
+        renderTable(Object.keys(allDaysData));
         showSuccess();
     } catch (error) {
-        // אם אין חיבור, השתמש בנתונים השמורים כגיבוי מלא
         if (Object.keys(savedAllDaysData).length > 0) {
             allDaysData = savedAllDaysData;
             renderTable(Object.keys(allDaysData));
             showSuccess();
             alert('שגיאה בטעינת הנתונים מהגיליון. המערכת משתמשת בנתונים השמורים האחרונים.');
         } else {
-            showError(`שגיאה קריטית בטעינת הנתונים. אנא בדוק את חיבור האינטרנט. שגיאה: ${error.message}`);
+            showError(`שגיאה קריטית בטעינת הנתונים. ודא שהגיליון זמין ונסה לרענן. שגיאה: ${error.message}`);
         }
     }
 };
 
-initializeApp();
+document.addEventListener('DOMContentLoaded', initializeApp);
 
 const openModal = (day) => {
     const modal = document.getElementById("assignmentModal");
     modal.dataset.currentDay = day;
     modal.querySelector("#modalTitle").textContent = `שיבוץ ליום ${day}`;
-    
     if (!assignments[day]) {
         assignments[day] = {
             runners: [], waiters: { hall: [], terrace: [] },
-            hostess: { hall: [], terrace: [] }, tastings: [],
-            arrivalTime: "17:00"
+            hostess: { hall: [], terrace: [] }, tastings: [], arrivalTime: "17:00"
         };
     }
-    
     document.getElementById('arrivalTimeInput').value = assignments[day].arrivalTime || "17:00";
     document.getElementById('workerSearchInput').value = '';
     updateWorkerLists(day);
@@ -456,25 +389,21 @@ const openModal = (day) => {
 
 const closeModal = () => {
     document.getElementById("assignmentModal").style.display = "none";
-    storage.saveData(assignments, allDaysData);
+    storage.saveData({ assignments, allDaysData });
     renderTable(Object.keys(allDaysData));
 };
 
 const updateWorkerLists = (day) => {
     const lists = {
-        available: document.getElementById("availableWorkersList"),
-        runners: document.getElementById("runnersList"),
-        waitersHall: document.getElementById("waitersHallList"),
-        waitersTerrace: document.getElementById("waitersTerraceList"),
-        hostessHall: document.getElementById("hostessHallList"),
-        hostessTerrace: document.getElementById("hostessTerraceList"),
+        available: document.getElementById("availableWorkersList"), runners: document.getElementById("runnersList"),
+        waitersHall: document.getElementById("waitersHallList"), waitersTerrace: document.getElementById("waitersTerraceList"),
+        hostessHall: document.getElementById("hostessHallList"), hostessTerrace: document.getElementById("hostessTerraceList"),
         tastings: document.getElementById("tastingsList")
     };
     Object.values(lists).forEach(list => list.innerHTML = '');
 
     const assignedForDay = assignments[day] || {};
     const allAvailableForDay = allDaysData[day] || [];
-    
     const assignedNames = Object.values(assignedForDay).flat(Infinity).map(w => w.name).filter(Boolean);
     const availableWorkers = allAvailableForDay.filter(name => name && !assignedNames.includes(name));
 
@@ -492,7 +421,6 @@ const updateWorkerLists = (day) => {
         li.onclick = () => unassignWorker(worker.name, role, subRole);
         return li;
     };
-    
     (assignedForDay.runners || []).forEach(w => lists.runners.appendChild(createAssignedItem(w, 'runners')));
     (assignedForDay.waiters?.hall || []).forEach(w => lists.waitersHall.appendChild(createAssignedItem(w, 'waiters', 'hall')));
     (assignedForDay.waiters?.terrace || []).forEach(w => lists.waitersTerrace.appendChild(createAssignedItem(w, 'waiters', 'terrace')));
@@ -512,24 +440,20 @@ const updateWorkerLists = (day) => {
 const assignWorker = (workerName, role, subRole = null) => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
     const workerData = { name: workerName };
-    const dayAssignments = assignments[day];
-
     if (subRole) {
-        if (!dayAssignments[role][subRole].some(w => w.name === workerName)) dayAssignments[role][subRole].push(workerData);
+        if (!assignments[day][role][subRole].some(w => w.name === workerName)) assignments[day][role][subRole].push(workerData);
     } else {
-        if (!dayAssignments[role].some(w => w.name === workerName)) dayAssignments[role].push(workerData);
+        if (!assignments[day][role].some(w => w.name === workerName)) assignments[day][role].push(workerData);
     }
     updateWorkerLists(day);
 };
 
 const unassignWorker = (workerName, role, subRole = null) => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
-    const dayAssignments = assignments[day];
-    
     if (subRole) {
-        dayAssignments[role][subRole] = dayAssignments[role][subRole].filter(w => w.name !== workerName);
+        assignments[day][role][subRole] = assignments[day][role][subRole].filter(w => w.name !== workerName);
     } else {
-        dayAssignments[role] = dayAssignments[role].filter(w => w.name !== workerName);
+        assignments[day][role] = assignments[day][role].filter(w => w.name !== workerName);
     }
     updateWorkerLists(day);
 };
@@ -546,7 +470,6 @@ const addAvailableWorker = () => {
     if (!workerName || workerName.trim() === '') return;
     const trimmedName = workerName.trim();
     const day = document.getElementById("assignmentModal").dataset.currentDay;
-    
     if (!allDaysData[day]) allDaysData[day] = [];
     if (allDaysData[day].includes(trimmedName)) {
         alert(`העובד "${trimmedName}" כבר קיים ברשימה.`);
@@ -565,51 +488,63 @@ const filterAvailableWorkers = () => {
 };
 
 const showSummary = () => {
-    storage.saveData(assignments, allDaysData);
+    storage.saveData({ assignments, allDaysData });
     sessionStorage.setItem('workSchedule', JSON.stringify(assignments));
     window.location.href = 'index.html';
 };
 
-/**
- * כפתור "התחלת סידור חדש" - מבצע איפוס מלא
- * מוחק את כל הנתונים השמורים (שיבוצים ועובדים ידניים) מה-localStorage
- * ומטעין מחדש את הדף כדי למשוך רשימה נקייה מה-Sheets.
- */
-const resetAllAssignments = () => {
+const resetAllData = () => {
     const confirmMessage = "האם אתה בטוח?\nפעולה זו תמחק לצמיתות את כל השיבוצים וגם את כל העובדים שהוספת ידנית.";
     if (confirm(confirmMessage)) {
+        // איפוס המשתנים בזיכרון הנוכחי
+        assignments = {};
+        allDaysData = {};
+        // מחיקת כל הנתונים מהאחסון
         storage.clearAllData();
         alert("כל הנתונים נמחקו. המערכת תטען מחדש עם נתונים נקיים מהגיליון.");
+        // טעינה מחדש של הדף כדי להתחיל נקי
         location.reload();
     }
 };
 
 const exportData = () => {
-    storage.exportToFile(assignments, allDaysData);
+    const dataToExport = { assignments, allDaysData, exportDate: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `work-schedule-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
 };
 
 const importData = (event) => {
     const file = event.target.files[0];
     if (!file) return;
     if (confirm("ייבוא הקובץ יחליף את כל הנתונים הנוכחיים. האם להמשיך?")) {
-        storage.importFromFile(file, (importedData) => {
-            assignments = importedData.assignments || {};
-            allDaysData = importedData.allDaysData || {};
-            storage.saveData(assignments, allDaysData);
-            renderTable(Object.keys(allDaysData));
-        });
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (importedData.assignments && importedData.allDaysData) {
+                    assignments = importedData.assignments;
+                    allDaysData = importedData.allDaysData;
+                    storage.saveData({ assignments, allDaysData });
+                    renderTable(Object.keys(allDaysData));
+                } else { throw new Error('פורמט קובץ לא תקין'); }
+            } catch (error) { alert(`שגיאה בייבוא: ${error.message}`); }
+        };
+        reader.readAsText(file);
     }
     event.target.value = '';
 };
 
 window.onclick = (event) => {
-    if (event.target == document.getElementById("assignmentModal")) {
-        closeModal();
-    }
+    if (event.target == document.getElementById("assignmentModal")) closeModal();
 };
 
 window.addEventListener('beforeunload', () => {
-    storage.saveData(assignments, allDaysData);
+    storage.saveData({ assignments, allDaysData });
 });
 </script>
 
