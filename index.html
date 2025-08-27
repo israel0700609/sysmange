@@ -1,4 +1,3 @@
-    
 <!DOCTYPE html>
 <html lang="he">
 <head>
@@ -7,7 +6,7 @@
 <title>סיכום סידור עבודה - לפי ימים</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 
 <!-- נוספו ספריות לייצוא PDF -->
@@ -168,54 +167,91 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =========================================================================
-// ============ קוד ייצוא PDF משופר - לעמוד אחד ארוך ורציף ============
+// ==================== קוד ייצוא PDF סופי עם שיטת ה-CLONE ====================
 // =========================================================================
 document.getElementById('export-pdf-btn').addEventListener('click', async () => {
     const exportButton = document.getElementById('export-pdf-btn');
     const originalButtonText = exportButton.textContent;
+    const elementToCapture = document.getElementById('capture');
+    let cloneForExport = null; // נגדיר את המשתנה כאן כדי שיהיה זמין ב-finally
 
     try {
-        exportButton.textContent = 'מייצא, נא להמתין...';
+        exportButton.textContent = 'מכין לייצוא...';
         exportButton.disabled = true;
 
-        const { jsPDF } = window.jspdf;
-        const elementToCapture = document.getElementById('capture');
+        // שלב 1: שכפול האלמנט המקורי
+        cloneForExport = elementToCapture.cloneNode(true);
 
-        const canvas = await html2canvas(elementToCapture, {
-            scale: 3, // שמירה על רזולוציה גבוהה לאיכות מעולה
+        // שלב 2: עיצוב השיבוט כך שיהיה מחוץ למסך וברוחב המקורי
+        // זה מאלץ את הדפדפן לחשב את הגובה המלא שלו ללא מגבלות של החלון
+        cloneForExport.style.position = 'absolute';
+        cloneForExport.style.top = '-9999px';
+        cloneForExport.style.left = '0px';
+        cloneForExport.style.width = elementToCapture.offsetWidth + 'px'; // קביעת רוחב זהה למקורי
+
+        // שלב 3: הוספת השיבוט ל-DOM כדי שהדפדפן יחשב את מידותיו
+        document.body.appendChild(cloneForExport);
+
+        // המתנה קצרה מאוד כדי להבטיח שהדפדפן סיים את חישוב הפריסה של השיבוט
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // שלב 4: הפעלת html2canvas על השיבוט המוכן, ולא על האלמנט המקורי
+        exportButton.textContent = 'מייצא, נא להמתין...';
+        const canvas = await html2canvas(cloneForExport, {
+            scale: 2,
             useCORS: true,
-            windowWidth: elementToCapture.scrollWidth,
-            windowHeight: elementToCapture.scrollHeight,
+            allowTaint: true,
+            // אנו אומרים לספרייה במפורש מה הגודל המלא של התוכן
+            height: cloneForExport.scrollHeight,
+            width: cloneForExport.scrollWidth,
+            windowHeight: cloneForExport.scrollHeight,
+            windowWidth: cloneForExport.scrollWidth
         });
 
+        // מכאן והלאה, הקוד מחלק את התמונה לעמודים בגודל A4
         const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
         
-        // חישוב יחס הגובה-רוחב של התמונה שנוצרה
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasHeight / canvasWidth;
+        const PDF_PAGE_WIDTH = 210;
+        const PDF_PAGE_HEIGHT = 297;
+        const PAGE_MARGIN = 15;
 
-        // הגדרת רוחב ה-PDF (רוחב של דף A4)
-        const pdfWidth = 210;
-        // חישוב גובה ה-PDF לפי יחס הגובה-רוחב כדי שכל התוכן ייכנס
-        const pdfHeight = pdfWidth * ratio;
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = imgHeight / imgWidth;
 
-        // יצירת מסמך PDF עם המידות המותאמות אישית
+        const pdfImgWidth = PDF_PAGE_WIDTH - (PAGE_MARGIN * 2);
+        const pdfImgHeight = pdfImgWidth * ratio;
+
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
-            // במקום 'a4', אנחנו מספקים מערך של [רוחב, גובה]
-            format: [pdfWidth, pdfHeight]
+            format: 'a4'
         });
 
-        // הוספת התמונה לעמוד היחיד והארוך
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save("work-schedule-long.pdf");
+        let heightLeft = pdfImgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', PAGE_MARGIN, 0, pdfImgWidth, pdfImgHeight);
+        heightLeft -= (PDF_PAGE_HEIGHT - PAGE_MARGIN);
+
+        while (heightLeft > 0) {
+            position -= (PDF_PAGE_HEIGHT - (PAGE_MARGIN*2));
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', PAGE_MARGIN, position, pdfImgWidth, pdfImgHeight);
+            heightLeft -= (PDF_PAGE_HEIGHT - PAGE_MARGIN);
+        }
+
+        pdf.save("work-schedule-final.pdf");
 
     } catch (error) {
         console.error("An error occurred during PDF export:", error);
         alert("אירעה שגיאה במהלך ייצוא ה-PDF.");
     } finally {
+        // שלב 5: ניקוי - הסרת השיבוט מה-DOM בין אם הייצוא הצליח או נכשל
+        if (cloneForExport) {
+            document.body.removeChild(cloneForExport);
+        }
         exportButton.textContent = originalButtonText;
         exportButton.disabled = false;
     }
@@ -223,5 +259,3 @@ document.getElementById('export-pdf-btn').addEventListener('click', async () => 
 </script>
 </body>
 </html>
-
-  
