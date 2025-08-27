@@ -158,50 +158,81 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- ייצוא כתמונה באיכות גבוהה ---
+async function setButtonsState(disabled, text) {
+    const buttons = document.querySelectorAll('.nav-button');
+    buttons.forEach(btn => btn.disabled = disabled);
+    if (text) {
+        if (document.activeElement && document.activeElement.classList.contains('nav-button')) {
+            document.activeElement.textContent = text;
+        }
+    }
+}
+
+function getFormattedDate() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// --- פתרון חדש: ייצוא תמונה ארוכה על ידי "תפירה" של חלקים ---
 document.getElementById('exportImageButton').addEventListener('click', async () => {
     const element = document.getElementById('capture');
-    const buttons = document.querySelectorAll('.nav-button');
-    const thisBtn = document.getElementById('exportImageButton');
-    
-    buttons.forEach(btn => btn.disabled = true);
-    thisBtn.textContent = 'מכין תמונה...';
-
-    await new Promise(r => setTimeout(r, 150));
+    await setButtonsState(true, 'מכין תמונה...');
 
     try {
-        const canvas = await html2canvas(element, { 
-            scale: 3, 
-            useCORS: true,
-            backgroundColor: '#f8f9fa'
-        });
+        const originalWidth = element.offsetWidth;
+        const originalHeight = element.offsetHeight;
         
+        // יצירת קנבס מאוחד בזיכרון
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = originalWidth * 3; // הגדלת הרזולוציה
+        finalCanvas.height = originalHeight * 3;
+        const ctx = finalCanvas.getContext('2d');
+        
+        const CHUNK_HEIGHT = window.innerHeight * 2; // גודל כל חתיכה לסריקה
+        let stitchedHeight = 0;
+
+        // סריקת האלמנט בחלקים
+        while (stitchedHeight < originalHeight) {
+            const captureHeight = Math.min(CHUNK_HEIGHT, originalHeight - stitchedHeight);
+            
+            const chunkCanvas = await html2canvas(element, {
+                scale: 3, // רזולוציה גבוהה
+                useCORS: true,
+                backgroundColor: '#f8f9fa',
+                width: originalWidth,
+                height: captureHeight,
+                y: stitchedHeight // נקודת התחלת הצילום
+            });
+
+            // "תפירת" החתיכה על הקנבס המאוחד
+            ctx.drawImage(chunkCanvas, 0, stitchedHeight * 3);
+            stitchedHeight += captureHeight;
+        }
+
         const link = document.createElement('a');
         link.download = `work-schedule-${getFormattedDate()}.png`;
-        link.href = canvas.toDataURL('image/png', 1.0);
+        link.href = finalCanvas.toDataURL('image/png', 1.0);
         link.click();
 
     } catch (error) {
         console.error("שגיאה בייצוא התמונה:", error);
         alert("אירעה שגיאה בייצוא התמונה. נסה לרענן את הדף.");
     } finally {
-        buttons.forEach(btn => btn.disabled = false);
-        thisBtn.textContent = 'ייצוא כתמונה (מומלץ)';
+        await setButtonsState(false);
+        document.getElementById('exportImageButton').textContent = 'ייצוא כתמונה (מומלץ)';
     }
 });
 
-// --- ייצוא ל-PDF מחולק לעמודים ---
+
+// --- ייצוא ל-PDF מחולק לעמודים (גיבוי אמין) ---
 document.getElementById('exportPdfButton').addEventListener('click', async () => {
     const { jsPDF } = window.jspdf;
     const element = document.getElementById('capture');
-    const buttons = document.querySelectorAll('.nav-button');
-    const thisBtn = document.getElementById('exportPdfButton');
-
-    buttons.forEach(btn => btn.disabled = true);
-    thisBtn.textContent = 'מכין PDF...';
+    await setButtonsState(true, 'מכין PDF...');
     
-    await new Promise(r => setTimeout(r, 150));
-
     try {
         const canvas = await html2canvas(element, { scale: 3, useCORS: true });
         const imgData = canvas.toDataURL('image/png');
@@ -210,16 +241,16 @@ document.getElementById('exportPdfButton').addEventListener('click', async () =>
         const imgHeight = canvas.height * imgWidth / canvas.width;
         let heightLeft = imgHeight;
         
-        const pdf = new jsPDF('p', 'mm');
+        const pdf = new jsPDF('p', 'mm', 'a4', true); // true = high quality compression
         let position = 0;
         
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
         
-        while (heightLeft >= 0) {
-            position = heightLeft - imgHeight;
+        while (heightLeft > 0) {
+            position = -pageHeight * (Math.floor(imgHeight / heightLeft) -1);
             pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pageHeight;
         }
         
@@ -229,19 +260,10 @@ document.getElementById('exportPdfButton').addEventListener('click', async () =>
         console.error("שגיאה בייצוא ה-PDF:", error);
         alert("אירעה שגיאה בייצוא ה-PDF. נסה לרענן את הדף.");
     } finally {
-        buttons.forEach(btn => btn.disabled = false);
-        thisBtn.textContent = 'ייצוא ל-PDF';
+        await setButtonsState(false);
+        document.getElementById('exportPdfButton').textContent = 'ייצוא ל-PDF';
     }
 });
-
-
-function getFormattedDate() {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
 </script>
 </body>
 </html>
