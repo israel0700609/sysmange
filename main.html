@@ -458,7 +458,8 @@ const showSuccess = () => {
 
 const tryFetchData = async () => {
     try {
-        const response = await fetch(URLS[0]);
+        // הוספת פרמטר אקראי כדי למנוע שמירה ב-cache
+        const response = await fetch(`${URLS[0]}&_=${new Date().getTime()}`);
         if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
         const text = await response.text();
         return parseCsvData(text);
@@ -516,7 +517,6 @@ const initializeApp = async () => {
     const savedData = storage.loadData();
     if (savedData) {
         assignments = savedData.assignments || {};
-        // שמירה על נתוני הגיליון המקוריים אבל עם עדכונים
         if (savedData.allDaysData) {
             allDaysData = savedData.allDaysData;
         }
@@ -526,29 +526,32 @@ const initializeApp = async () => {
         // טעינת נתונים חדשים מהגיליון
         const { headers, freshDaysData } = await tryFetchData();
         
-        // מיזוג נתונים: נתונים חדשים מהגיליון + עדכונים מקומיים
+        // מיזוג נתונים: אם allDaysData ריק (כמו אחרי איפוס), הוא יקבל את הנתונים החדשים.
+        // אם הוא לא ריק, הוא ישמור על עובדים שנוספו ידנית.
         Object.keys(freshDaysData).forEach(day => {
             if (!allDaysData[day]) {
-                allDaysData[day] = freshDaysData[day];
-            } else {
-                // הוספת עובדים חדשים מהגיליון שלא קיימים מקומית
-                freshDaysData[day].forEach(worker => {
-                    if (!allDaysData[day].includes(worker)) {
-                        allDaysData[day].push(worker);
-                    }
-                });
+                allDaysData[day] = [];
             }
+            // הוספת עובדים חדשים מהגיליון שלא קיימים מקומית
+            freshDaysData[day].forEach(worker => {
+                if (!allDaysData[day].includes(worker)) {
+                    allDaysData[day].push(worker);
+                }
+            });
         });
+        
+        // אם אין allDaysData כלל, החלף אותו בחדש
+        if (Object.keys(allDaysData).length === 0) {
+            allDaysData = freshDaysData;
+        }
 
-        renderTable(headers);
+        renderTable(Object.keys(allDaysData));
         showSuccess();
         
-        // שמירה וStartup של auto-save
         storage.saveData(assignments, allDaysData);
         storage.startAutoSave(assignments, allDaysData);
         
     } catch (error) {
-        // אם יש נתונים שמורים, השתמש בהם
         if (savedData && Object.keys(savedData.allDaysData || {}).length > 0) {
             const headers = Object.keys(allDaysData);
             renderTable(headers);
@@ -588,9 +591,7 @@ const openModal = (day) => {
 
 const closeModal = () => {
     document.getElementById("assignmentModal").style.display = "none";
-    // שמירה אוטומטית כשסוגרים מודל
     storage.saveData(assignments, allDaysData);
-    // עדכון האינדיקטורים
     renderTable(Object.keys(allDaysData));
 };
 
@@ -673,7 +674,6 @@ const assignWorker = (workerName, role, subRole = null) => {
         }
     }
     updateWorkerLists(day);
-    // שמירה מיידית
     storage.saveData(assignments, allDaysData);
 };
 
@@ -690,7 +690,6 @@ const unassignWorker = (workerName, role, subRole = null) => {
         }
     }
     updateWorkerLists(day);
-    // שמירה מיידית
     storage.saveData(assignments, allDaysData);
 };
 
@@ -698,7 +697,6 @@ const saveArrivalTime = () => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
     if (assignments[day]) {
         assignments[day].arrivalTime = document.getElementById('arrivalTimeInput').value.trim();
-        // שמירה מיידית
         storage.saveData(assignments, allDaysData);
     }
 };
@@ -715,7 +713,6 @@ const addAvailableWorker = () => {
     if (!allDaysData[day]) allDaysData[day] = [];
     allDaysData[day].push(trimmedName);
     updateWorkerLists(day);
-    // שמירה מיידית
     storage.saveData(assignments, allDaysData);
 };
 
@@ -736,26 +733,42 @@ const filterAvailableWorkers = () => {
 // ============================================================================
 
 const showSummary = () => {
-    // שמירה לפני מעבר לסיכום
     storage.saveData(assignments, allDaysData);
     sessionStorage.setItem('workSchedule', JSON.stringify(assignments));
     window.location.href = 'index.html';
 };
 
-const resetAllAssignments = () => {
-    const confirmMessage = "האם אתה בטוח שברצונך לאפס את כל השיבוצים?\nפעולה זו תמחק את כל הנתונים השמורים ולא ניתן לבטלה.";
+// ==================== שינוי כאן ====================
+// הפונקציה עודכנה כדי לאפס את כל הנתונים ולטעון מחדש מהגיליון
+const resetAllAssignments = async () => {
+    const confirmMessage = "האם אתה בטוח שברצונך להתחיל סידור חדש?\nפעולה זו תמחק את כל השיבוצים והעובדים שהוספת ידנית, ותטען מחדש את רשימת העובדים המקורית מגוגל שיטס.";
     if (confirm(confirmMessage)) {
-        // איפוס המשתנים
-        assignments = {};
+        // עצירת תהליכים ברקע
+        storage.stopAutoSave();
+
+        // הצגת הודעת טעינה למשתמש
+        const loadingMsg = document.getElementById("loadingMessage");
+        loadingMsg.textContent = "מאפס את המערכת וטוען נתונים עדכניים...";
+        loadingMsg.style.display = "block";
+        document.getElementById("daysTable").style.display = "none";
+        document.getElementById("errorMessage").style.display = "none";
         
-        // מחיקת הנתונים השמורים
+        // 1. איפוס המשתנים הגלובליים
+        assignments = {};
+        allDaysData = {}; // <-- מחיקת רשימת העובדים הקיימת
+        
+        // 2. מחיקת הנתונים השמורים ב-LocalStorage
         storage.clearAllData();
         
-        // עדכון הממשק
-        renderTable(Object.keys(allDaysData));
-        
-        // הודעה למשתמש
-        alert("כל השיבוצים נמחקו בהצלחה. תוכל להתחיל מחדש.");
+        // 3. טעינה מחדש של האפליקציה מההתחלה
+        // initializeApp יטען את הנתונים מהגיליון, ימלא את allDaysData מחדש, וירנדר את הטבלה
+        try {
+            // קריאה מחדש ל-initializeApp כדי שיביא את הכל מה-Sheet
+            await initializeApp();
+            storage.updateSaveStatus('success', 'המערכת אופסה בהצלחה. נטענו נתונים עדכניים.');
+        } catch (error) {
+            showError(`אירעה שגיאה באיפוס וטעינה מחדש: ${error.message}`);
+        }
     }
 };
 
@@ -769,22 +782,15 @@ const importData = (event) => {
 
     const confirmMessage = "ייבוא הקובץ יחליף את כל הנתונים הנוכחיים. האם להמשיך?";
     if (!confirm(confirmMessage)) {
-        event.target.value = ''; // איפוס בחירת הקובץ
+        event.target.value = '';
         return;
     }
 
     storage.importFromFile(file, (importedData) => {
-        // עדכון הנתונים
         assignments = importedData.assignments || {};
         allDaysData = importedData.allDaysData || {};
-        
-        // שמירה מיידית
         storage.saveData(assignments, allDaysData);
-        
-        // עדכון הממשק
         renderTable(Object.keys(allDaysData));
-        
-        // איפוס בחירת הקובץ
         event.target.value = '';
     });
 };
@@ -799,13 +805,11 @@ window.onclick = (event) => {
     }
 };
 
-// שמירה כשסוגרים את הדף
 window.addEventListener('beforeunload', () => {
     storage.saveData(assignments, allDaysData);
     storage.stopAutoSave();
 });
 
-// שמירה כשהדף מאבד פוקוס
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         storage.saveData(assignments, allDaysData);
@@ -815,5 +819,4 @@ document.addEventListener('visibilitychange', () => {
 </script>
 
 </body>
-</html>
-
+</html>```
