@@ -298,32 +298,41 @@ function calculateScheduleStats(schedule) {
     return { totalDays, totalUniqueWorkers: uniqueWorkers.size };
 }
 
+// =========================================================================
+// ============ קוד ייצוא PDF משופר עם חלוקה לעמודים ============
+// =========================================================================
 
-// ==================== ייצוא PDF מתוקן ====================
 document.getElementById('exportButton').addEventListener('click', async () => {
     const exportButton = document.getElementById('exportButton');
     const backButton = document.getElementById('backButton');
     const originalButtonText = exportButton.textContent;
     const elementToCapture = document.getElementById('capture');
 
+    // שלב 1: הכנה לצילום
     exportButton.textContent = 'מייצא, נא להמתין...';
     exportButton.disabled = true;
     backButton.style.display = 'none';
     exportButton.style.display = 'none';
-
+    
+    // שמירת סגנונות מקוריים
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
+
+    // גלילה לראש העמוד ושינוי סגנונות זמני כדי לאפשר רינדור מלא
+    window.scrollTo(0, 0);
     document.body.style.height = 'auto';
     document.body.style.overflow = 'visible';
     document.documentElement.style.height = 'auto';
     document.documentElement.style.overflow = 'visible';
-
-    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    await new Promise(resolve => setTimeout(resolve, 100)); // המתנה קצרה לעדכון התצוגה
 
     try {
         const { jsPDF } = window.jspdf;
+
+        // שלב 2: צילום האלמנט
         const canvas = await html2canvas(elementToCapture, {
-            scale: 2.5,
+            scale: 2.5, // רזולוציה גבוהה
             useCORS: true,
             allowTaint: true,
             windowWidth: elementToCapture.scrollWidth,
@@ -332,20 +341,32 @@ document.getElementById('exportButton').addEventListener('click', async () => {
         });
 
         const imgData = canvas.toDataURL('image/png', 1.0);
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasHeight / canvasWidth;
-        const pdfWidth = 210; // A4 width in mm
-        const pdfHeight = pdfWidth * ratio;
-
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: [pdfWidth, pdfHeight]
-        });
         
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        // שלב 3: יצירת PDF מחולק לעמודים
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = imgHeight / imgWidth;
+        
+        const pdfImgHeight = pageWidth * ratio;
+        let heightLeft = pdfImgHeight;
+        let position = 0;
 
+        // הוספת העמוד הראשון
+        pdf.addImage(imgData, 'PNG', 0, position, pageWidth, pdfImgHeight);
+        heightLeft -= pageHeight;
+
+        // הוספת עמודים נוספים במידת הצורך
+        while (heightLeft > 0) {
+            position = -heightLeft;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, pageWidth, pdfImgHeight);
+            heightLeft -= pageHeight;
+        }
+        
         const date = new Date();
         const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
         pdf.save(`work-schedule-${formattedDate}.pdf`);
@@ -354,8 +375,10 @@ document.getElementById('exportButton').addEventListener('click', async () => {
         console.error("An error occurred during PDF export:", error);
         alert("אירעה שגיאה במהלך ייצוא ה-PDF.");
     } finally {
+        // שלב 4: ניקוי ושחזור
         document.body.style.cssText = originalBodyStyle;
         document.documentElement.style.cssText = originalHtmlStyle;
+
         exportButton.textContent = originalButtonText;
         exportButton.disabled = false;
         exportButton.style.display = 'inline-block';
