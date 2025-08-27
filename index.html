@@ -145,27 +145,113 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; font-weight: 70
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    const scheduleDataString = sessionStorage.getItem('workSchedule');
+    // נתוני דוגמה לבדיקה - במקום sessionStorage
+
+    const sampleSchedule = {
+
+        'ראשון': {
+
+            arrivalTime: '16:00',
+
+            runners: [
+
+                {name: 'יוסי כהן'}, {name: 'דנה לוי'}, {name: 'רון אברהם'}
+
+            ],
+
+            waiters: {
+
+                hall: [
+
+                    {name: 'מיכל דוד'}, {name: 'עמית גולן'}, {name: 'שירה כהן'}
+
+                ],
+
+                terrace: [
+
+                    {name: 'אלון משה'}, {name: 'נועה רוזן'}
+
+                ]
+
+            },
+
+            hostess: {
+
+                hall: [{name: 'רחל אלון'}],
+
+                terrace: [{name: 'תמר יעקב'}]
+
+            },
+
+            tastings: [{name: 'אורי סלע'}]
+
+        },
+
+        'שני': {
+
+            arrivalTime: '17:30',
+
+            runners: [
+
+                {name: 'גיל נחום'}, {name: 'לירון בן דוד'}
+
+            ],
+
+            waiters: {
+
+                hall: [
+
+                    {name: 'עידו מלכה'}, {name: 'שני אוחנה'}
+
+                ],
+
+                terrace: [
+
+                    {name: 'רועי חזן'}
+
+                ]
+
+            },
+
+            hostess: {
+
+                hall: [{name: 'מור לביא'}],
+
+                terrace: []
+
+            },
+
+            tastings: [{name: 'נתן גרין'}]
+
+        }
+
+    };
+
+
+    // נסה לקבל נתונים מ-sessionStorage, אחרת השתמש בדוגמה
+
+    let schedule;
+
+    try {
+
+        const scheduleDataString = sessionStorage.getItem('workSchedule');
+
+        schedule = scheduleDataString ? JSON.parse(scheduleDataString) : sampleSchedule;
+
+    } catch (error) {
+
+        console.log('משתמש בנתוני דוגמה');
+
+        schedule = sampleSchedule;
+
+    }
+
 
     const container = document.getElementById('scheduleByDayContainer');
 
     const noDataMsg = document.getElementById('no-data-message');
 
     const exportButton = document.getElementById('exportImageButton');
-
-
-    if (!scheduleDataString) {
-
-        noDataMsg.style.display = 'block';
-
-        exportButton.style.display = 'none';
-
-        return;
-
-    }
-
-
-    const schedule = JSON.parse(scheduleDataString);
 
     const dayOrder = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 
@@ -308,55 +394,73 @@ document.getElementById('exportImageButton').addEventListener('click', async () 
 
     btn.textContent = 'מכין תמונה...';
 
-    backBtn.style.display = 'none'; // הסתר כפתורים לפני הצילום
+    backBtn.style.display = 'none';
 
 
     // המתן רגע שהממשק יתעדכן
 
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 300));
 
 
     try {
 
-        const canvas = await html2canvas(element, { 
+        // בדוק אם html2canvas זמין
 
-            scale: 3, // איכות גבוהה יותר - רזולוציה פי 3
+        if (typeof html2canvas === 'undefined') {
 
-            useCORS: true,
+            throw new Error('html2canvas לא נטען');
 
-            backgroundColor: '#f8f9fa', // צבע רקע
+        }
 
-            scrollX: 0,
 
-            scrollY: 0,
-
-            width: element.scrollWidth,
-
-            height: element.scrollHeight,
-
-            // הגדרות נוספות לאיכות טובה יותר
-
-            allowTaint: false,
-
-            foreignObjectRendering: false,
-
-            imageTimeout: 15000,
-
-            removeContainer: false
-
-        });
+        console.log('מתחיל ייצוא תמונה...');
 
         
 
-        // יצירת קובץ והורדה באיכות מקסימלית
+        const canvas = await html2canvas(element, { 
+
+            scale: 2, // הורדנו ל-2 לביצועים טובים יותר
+
+            useCORS: true,
+
+            backgroundColor: '#f8f9fa',
+
+            logging: true, // הוסף לוגים לדיבוג
+
+            allowTaint: true,
+
+            foreignObjectRendering: true,
+
+            imageTimeout: 10000,
+
+            onclone: function(clonedDoc) {
+
+                console.log('מסמך שוכפל בהצלחה');
+
+            }
+
+        });
+
+
+        console.log(`Canvas נוצר: ${canvas.width}x${canvas.height}`);
+
+        
+
+        // יצירת קובץ והורדה
+
+        const dataURL = canvas.toDataURL('image/png', 0.95);
+
+        
 
         const link = document.createElement('a');
 
         link.download = `work-schedule-${getFormattedDate()}.png`;
 
-        // שמירה באיכות מקסימלית (1.0 = 100% איכות)
+        link.href = dataURL;
 
-        link.href = canvas.toDataURL('image/png', 1.0);
+        
+
+        // הוסף לדום, לחץ והסר
 
         document.body.appendChild(link);
 
@@ -365,14 +469,66 @@ document.getElementById('exportImageButton').addEventListener('click', async () 
         document.body.removeChild(link);
 
 
-        console.log(`תמונה נשמרה ברזולוציה: ${canvas.width}x${canvas.height}`);
+        console.log('תמונה הורדה בהצלחה!');
+
+        alert('התמונה הורדה בהצלחה!');
 
 
     } catch (error) {
 
-        console.error("שגיאה בייצוא התמונה:", error);
+        console.error("שגיאה מפורטת:", error);
 
-        alert("אירעה שגיאה בייצוא התמונה. נסה לרענן את הדף ולנסות שוב.");
+        console.error("Stack trace:", error.stack);
+
+        
+
+        // נסה דרך אלטרנטיבית
+
+        try {
+
+            console.log('מנסה דרך אלטרנטיבית...');
+
+            const canvas = await html2canvas(element, { 
+
+                scale: 1,
+
+                useCORS: false,
+
+                backgroundColor: '#ffffff',
+
+                logging: false
+
+            });
+
+            
+
+            const dataURL = canvas.toDataURL('image/png');
+
+            const link = document.createElement('a');
+
+            link.download = `work-schedule-simple-${getFormattedDate()}.png`;
+
+            link.href = dataURL;
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            document.body.removeChild(link);
+
+            
+
+            alert('תמונה הורדה בהצלחה (באיכות בסיסית)');
+
+            
+
+        } catch (altError) {
+
+            console.error("גם הדרך האלטרנטיבית נכשלה:", altError);
+
+            alert(`שגיאה בייצוא התמונה: ${error.message}. בדוק את ה-console לפרטים נוספים.`);
+
+        }
 
     } finally {
 
@@ -380,7 +536,7 @@ document.getElementById('exportImageButton').addEventListener('click', async () 
 
         btn.textContent = 'ייצוא כתמונה';
 
-        backBtn.style.display = 'inline-flex'; // החזר כפתורים לתצוגה
+        backBtn.style.display = 'inline-flex';
 
     }
 
