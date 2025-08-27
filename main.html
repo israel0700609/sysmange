@@ -30,8 +30,6 @@
             padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-md);
         }
         h2 { text-align: center; color: var(--text-color); margin-bottom: 25px; font-size: 2.2rem; }
-        
-        /* סטטוס השמירה */
         .save-status {
             background-color: #d1ecf1; color: #0c5460; padding: 10px 15px;
             border-radius: var(--border-radius); margin-bottom: 20px; text-align: center;
@@ -39,7 +37,6 @@
         }
         .save-status.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
         .save-status.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
-        
         #daysTable {
             width: 100%; border-collapse: separate;
             border-spacing: 0 8px; margin-bottom: 20px;
@@ -54,44 +51,35 @@
             background-color: var(--primary-color); color: #fff;
             transform: translateY(-2px); box-shadow: var(--shadow-sm);
         }
-        
-        /* אינדיקטור שיבוצים */
         .assignment-indicator {
             position: absolute; top: 5px; right: 5px; background-color: var(--success-color);
             color: white; border-radius: 50%; width: 20px; height: 20px;
             display: flex; align-items: center; justify-content: center;
             font-size: 0.8rem; font-weight: bold;
         }
-        
         #summaryButtonContainer { 
             text-align: center; margin-top: 30px; display: flex; 
             justify-content: center; gap: 15px; flex-wrap: wrap;
         }
-        
         .action-button {
             padding: 12px 25px; font-size: 1.2rem; font-weight: 500; color: #fff;
             border: none; border-radius: var(--border-radius); cursor: pointer; 
             transition: all 0.2s ease; text-decoration: none; display: inline-block;
         }
-        
         #summaryButton { background-color: var(--success-color); }
         #resetButton { background-color: var(--danger-color); }
         #exportButton { background-color: var(--warning-color); color: var(--text-color); }
         #importButton { background-color: var(--dark-gray); }
-        
         .action-button:hover { 
             filter: brightness(110%); box-shadow: var(--shadow-sm); 
             transform: translateY(-1px);
         }
-        
         .file-input-wrapper {
             position: relative; overflow: hidden; display: inline-block;
         }
-        
         #importFile {
             position: absolute; left: -9999px;
         }
-        
         .modal {
             display: none; position: fixed; z-index: 1000; left: 0; top: 0;
             width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.6);
@@ -185,7 +173,6 @@
         }
         .error-message { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .loading-message { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-
         @media (max-width: 768px) {
             body { padding: 10px; font-size: 16px; }
             .container { padding: 15px; }
@@ -240,7 +227,6 @@
                     <ul id="availableWorkersList" class="user-list"></ul>
                 </div>
             </div>
-
             <div class="modal-column">
                 <div class="column-title">עובדים משובצים</div>
                 <div class="list-container" id="assignedWorkersContainer">
@@ -263,91 +249,60 @@
 </div>
 
 <script>
-// ============================================================================
-// ==================== מערכת שמירה ושחזור משופרת ====================
-// ============================================================================
-
 class WorkScheduleStorage {
     constructor() {
         this.STORAGE_KEY = 'workScheduleData';
         this.BACKUP_KEY = 'workScheduleBackup';
-        this.AUTO_SAVE_INTERVAL = 5000; // 5 שניות
-        this.autoSaveTimer = null;
-        this.isAutoSaveEnabled = true;
     }
 
-    // שמירת נתונים
     saveData(assignments, allDaysData) {
         try {
             const dataToSave = {
                 assignments: assignments,
                 allDaysData: allDaysData,
-                timestamp: new Date().toISOString(),
-                version: "1.0"
+                timestamp: new Date().toISOString()
             };
-
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dataToSave));
-            localStorage.setItem(this.BACKUP_KEY, JSON.stringify(dataToSave));
-            
-            this.updateSaveStatus('success', 'הנתונים נשמרו בהצלחה');
-            return true;
         } catch (error) {
             console.error('שגיאה בשמירת נתונים:', error);
-            this.updateSaveStatus('error', 'שגיאה בשמירת נתונים');
+        }
+    }
+
+    loadData() {
+        try {
+            const data = localStorage.getItem(this.STORAGE_KEY);
+            return data ? JSON.parse(data) : null;
+        } catch (error) {
+            console.error('שגיאה בטעינת נתונים:', error);
+            return null;
+        }
+    }
+
+    clearAllData() {
+        try {
+            localStorage.removeItem(this.STORAGE_KEY);
+            return true;
+        } catch (error) {
+            console.error('שגיאה במחיקת נתונים:', error);
             return false;
         }
     }
 
-    // טעינת נתונים
-    loadData() {
-        try {
-            let data = localStorage.getItem(this.STORAGE_KEY);
-            
-            if (!data) {
-                data = localStorage.getItem(this.BACKUP_KEY);
-                if (data) this.updateSaveStatus('warning', 'נטענו נתונים מגיבוי');
-            }
-
-            if (data) {
-                const parsedData = JSON.parse(data);
-                this.updateSaveStatus('success', `נתונים נטענו (${new Date(parsedData.timestamp).toLocaleString('he-IL')})`);
-                return parsedData;
-            }
-            
-            return null;
-        } catch (error) {
-            console.error('שגיאה בטעינת נתונים:', error);
-            this.updateSaveStatus('error', 'שגיאה בטעינת נתונים שמורים');
-            return null;
-        }
-    }
-
-    // ייצוא לקובץ
     exportToFile(assignments, allDaysData) {
-        try {
-            const dataToExport = {
-                assignments: assignments,
-                allDaysData: allDaysData,
-                exportDate: new Date().toISOString(),
-                version: "1.0"
-            };
-            const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `work-schedule-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            this.updateSaveStatus('success', 'הנתונים יוצאו בהצלחה');
-        } catch (error) {
-            console.error('שגיאה בייצוא:', error);
-            this.updateSaveStatus('error', 'שגיאה בייצוא נתונים');
-        }
+        const dataToExport = {
+            assignments: assignments,
+            allDaysData: allDaysData,
+            exportDate: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `work-schedule-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
-    // ייבוא מקובץ
     importFromFile(file, callback) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -355,59 +310,17 @@ class WorkScheduleStorage {
                 const importedData = JSON.parse(e.target.result);
                 if (importedData.assignments && importedData.allDaysData) {
                     callback(importedData);
-                    this.updateSaveStatus('success', 'הנתונים יובאו בהצלחה');
                 } else {
                     throw new Error('פורמט קובץ לא תקין');
                 }
             } catch (error) {
                 console.error('שגיאה בייבוא:', error);
-                this.updateSaveStatus('error', 'שגיאה בייבוא הקובץ - פורמט לא תקין');
+                alert('שגיאה בייבוא הקובץ - פורמט לא תקין');
             }
         };
         reader.readAsText(file);
     }
-
-    // מחיקת כל הנתונים
-    clearAllData() {
-        try {
-            localStorage.removeItem(this.STORAGE_KEY);
-            localStorage.removeItem(this.BACKUP_KEY);
-            this.updateSaveStatus('success', 'כל הנתונים נמחקו');
-            return true;
-        } catch (error) {
-            console.error('שגיאה במחיקת נתונים:', error);
-            this.updateSaveStatus('error', 'שגיאה במחיקת נתונים');
-            return false;
-        }
-    }
-
-    // שמירה אוטומטית
-    startAutoSave(assignments, allDaysData) {
-        if (!this.isAutoSaveEnabled) return;
-        if (this.autoSaveTimer) clearInterval(this.autoSaveTimer);
-        this.autoSaveTimer = setInterval(() => this.saveData(assignments, allDaysData), this.AUTO_SAVE_INTERVAL);
-    }
-
-    stopAutoSave() {
-        if (this.autoSaveTimer) {
-            clearInterval(this.autoSaveTimer);
-            this.autoSaveTimer = null;
-        }
-    }
-
-    // עדכון סטטוס השמירה
-    updateSaveStatus(type, message) {
-        const statusEl = document.getElementById('saveStatus');
-        statusEl.className = `save-status ${type}`;
-        statusEl.textContent = message;
-        statusEl.style.display = 'block';
-        setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
-    }
 }
-
-// ============================================================================
-// ==================== הקוד הראשי ====================
-// ============================================================================
 
 const SHEET_ID = "1_8vucMhNhGViLxDxUFe8XvrwRGBWtBxpieIfP8S24A4";
 const GID = "2089507675";
@@ -415,7 +328,7 @@ const URLS = [`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=
 
 let allDaysData = {};
 let assignments = {};
-let storage = new WorkScheduleStorage();
+const storage = new WorkScheduleStorage();
 
 const showError = (message) => {
     document.getElementById("errorMessage").textContent = message;
@@ -431,10 +344,9 @@ const showSuccess = () => {
 
 const tryFetchData = async () => {
     try {
-        const response = await fetch(URLS[0]);
+        const response = await fetch(`${URLS[0]}&_=${new Date().getTime()}`); // Cache busting
         if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-        const text = await response.text();
-        return parseCsvData(text);
+        return await response.text();
     } catch (error) {
         console.error("Critical error fetching data:", error);
         throw error;
@@ -443,7 +355,7 @@ const tryFetchData = async () => {
 
 const parseCsvData = (csvText) => {
     const lines = csvText.trim().split(/\r?\n/);
-    if (lines.length === 0) throw new Error("CSV file is empty.");
+    if (lines.length === 0) return { headers: [], freshDaysData: {} };
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
     
     const freshDaysData = {};
@@ -462,8 +374,7 @@ const renderTable = (headers) => {
     const tableHeaders = document.getElementById("tableHeaders");
     tableHeaders.innerHTML = headers.map(h => {
         const assignmentCount = getAssignmentCount(h);
-        const indicator = assignmentCount > 0 ? 
-            `<span class="assignment-indicator">${assignmentCount}</span>` : '';
+        const indicator = assignmentCount > 0 ? `<span class="assignment-indicator">${assignmentCount}</span>` : '';
         return `<th data-day="${h}">${h}${indicator}</th>`;
     }).join("");
     
@@ -473,8 +384,8 @@ const renderTable = (headers) => {
 };
 
 const getAssignmentCount = (day) => {
-    if (!assignments[day]) return 0;
     const dayAssignments = assignments[day];
+    if (!dayAssignments) return 0;
     return (dayAssignments.runners?.length || 0) +
            (dayAssignments.waiters?.hall?.length || 0) +
            (dayAssignments.waiters?.terrace?.length || 0) +
@@ -483,76 +394,52 @@ const getAssignmentCount = (day) => {
            (dayAssignments.tastings?.length || 0);
 };
 
-// טעינה ראשונית
 const initializeApp = async () => {
     const savedData = storage.loadData();
-    let savedAssignments = {};
-    let savedAllDaysData = {};
-    if (savedData) {
-        savedAssignments = savedData.assignments || {};
-        savedAllDaysData = savedData.allDaysData || {};
-    }
-    assignments = savedAssignments;
+    assignments = savedData?.assignments || {};
+    const savedAllDaysData = savedData?.allDaysData || {};
 
     try {
-        // שלב 1: טעינת הרשימה העדכנית מה-Sheets. זוהי "גרסת האמת" הבסיסית.
-        const { headers, freshDaysData } = await tryFetchData();
+        const csvText = await tryFetchData();
+        const { headers, freshDaysData } = parseCsvData(csvText);
         
-        // שלב 2: הגדרת הרשימה העדכנית כבסיס.
+        // שלב 1: התחל עם הנתונים הטריים מה-Sheets
         allDaysData = freshDaysData;
 
-        // שלב 3: מיזוג חכם - הוספת עובדים שהוספו ידנית בעבר.
-        // עובד שהוסף ידנית הוא עובד שקיים ברשימה השמורה (savedAllDaysData)
-        // אבל לא קיים ברשימה החדשה שהגיעה מה-Sheets (freshDaysData).
+        // שלב 2: הוסף עובדים ידניים שנשמרו מה-localStorage
+        // עובד ידני הוא עובד שקיים בזיכרון המקומי אך לא ברשימה שהגיעה כרגע מה-Sheets
         Object.keys(savedAllDaysData).forEach(day => {
-            if (allDaysData[day]) { // מוודא שהיום עדיין קיים
-                savedAllDaysData[day].forEach(savedWorker => {
-                    const isFromSheet = freshDaysData[day]?.includes(savedWorker);
-                    const isAlreadyAdded = allDaysData[day].includes(savedWorker);
-                    
-                    if (!isFromSheet && !isAlreadyAdded) {
-                        allDaysData[day].push(savedWorker);
-                    }
-                });
-            } else if (savedAllDaysData[day].length > 0) {
-                 // אם היום נמחק מהשיטס אבל יש לו עובדים שמורים, נוסיף אותו
-                 allDaysData[day] = savedAllDaysData[day];
-            }
+            if (!allDaysData[day]) allDaysData[day] = []; // צור את היום אם לא קיים
+            savedAllDaysData[day].forEach(savedWorker => {
+                const isFromSheet = freshDaysData[day]?.includes(savedWorker);
+                if (!isFromSheet && !allDaysData[day].includes(savedWorker)) {
+                    allDaysData[day].push(savedWorker);
+                }
+            });
         });
-
-        const finalHeaders = Object.keys(allDaysData).sort((a, b) => headers.indexOf(a) - headers.indexOf(b));
-        renderTable(finalHeaders);
+        
+        renderTable(headers);
         showSuccess();
-        
-        storage.saveData(assignments, allDaysData);
-        storage.startAutoSave(assignments, allDaysData);
-        
     } catch (error) {
-        // במקרה של שגיאה בטעינה מה-Sheets, נשתמש בנתונים השמורים כגיבוי.
+        // אם אין חיבור, השתמש בנתונים השמורים כגיבוי מלא
         if (Object.keys(savedAllDaysData).length > 0) {
             allDaysData = savedAllDaysData;
-            const headers = Object.keys(allDaysData);
-            renderTable(headers);
+            renderTable(Object.keys(allDaysData));
             showSuccess();
-            storage.updateSaveStatus('warning', 'עובד עם נתונים שמורים - אין חיבור לגיליון');
+            alert('שגיאה בטעינת הנתונים מהגיליון. המערכת משתמשת בנתונים השמורים האחרונים.');
         } else {
-            showError(`שגיאה בטעינת הנתונים. ודא שהגיליון פורסם כ-CSV. שגיאה: ${error.message}`);
+            showError(`שגיאה קריטית בטעינת הנתונים. אנא בדוק את חיבור האינטרנט. שגיאה: ${error.message}`);
         }
     }
 };
 
-// תחילת האפליקציה
 initializeApp();
-
-// ============================================================================
-// ==================== פונקציות הממשק ====================
-// ============================================================================
 
 const openModal = (day) => {
     const modal = document.getElementById("assignmentModal");
-    modal.querySelector("#modalTitle").textContent = `שיבוץ ליום ${day}`;
     modal.dataset.currentDay = day;
-
+    modal.querySelector("#modalTitle").textContent = `שיבוץ ליום ${day}`;
+    
     if (!assignments[day]) {
         assignments[day] = {
             runners: [], waiters: { hall: [], terrace: [] },
@@ -560,7 +447,7 @@ const openModal = (day) => {
             arrivalTime: "17:00"
         };
     }
-
+    
     document.getElementById('arrivalTimeInput').value = assignments[day].arrivalTime || "17:00";
     document.getElementById('workerSearchInput').value = '';
     updateWorkerLists(day);
@@ -575,59 +462,43 @@ const closeModal = () => {
 
 const updateWorkerLists = (day) => {
     const lists = {
-        available: document.getElementById("availableWorkersList"), 
+        available: document.getElementById("availableWorkersList"),
         runners: document.getElementById("runnersList"),
-        waitersHall: document.getElementById("waitersHallList"), 
+        waitersHall: document.getElementById("waitersHallList"),
         waitersTerrace: document.getElementById("waitersTerraceList"),
-        hostessHall: document.getElementById("hostessHallList"), 
+        hostessHall: document.getElementById("hostessHallList"),
         hostessTerrace: document.getElementById("hostessTerraceList"),
         tastings: document.getElementById("tastingsList")
     };
     Object.values(lists).forEach(list => list.innerHTML = '');
 
-    const assignedForDay = assignments[day];
+    const assignedForDay = assignments[day] || {};
     const allAvailableForDay = allDaysData[day] || [];
     
-    const assignedNames = [
-        ...(assignedForDay.runners || []).map(w => w.name),
-        ...(assignedForDay.waiters?.hall || []).map(w => w.name),
-        ...(assignedForDay.waiters?.terrace || []).map(w => w.name),
-        ...(assignedForDay.hostess?.hall || []).map(w => w.name),
-        ...(assignedForDay.hostess?.terrace || []).map(w => w.name),
-        ...(assignedForDay.tastings || []).map(w => w.name)
-    ];
-
+    const assignedNames = Object.values(assignedForDay).flat(Infinity).map(w => w.name).filter(Boolean);
     const availableWorkers = allAvailableForDay.filter(name => name && !assignedNames.includes(name));
 
     availableWorkers.forEach(workerName => {
-        const listItem = document.createElement("li");
-        listItem.className = "user-item";
-        listItem.innerHTML = `<span class="user-name">${workerName}</span>
-            <div class="assign-buttons">
-                <button class="runner" onclick="assignWorker('${workerName}', 'runners')">ראנר</button>
-                <button class="waiter-hall" onclick="assignWorker('${workerName}', 'waiters', 'hall')">מלצר אולם</button>
-                <button class="waiter-terrace" onclick="assignWorker('${workerName}', 'waiters', 'terrace')">מלצר טרסה</button>
-                <button class="hostess-hall" onclick="assignWorker('${workerName}', 'hostess', 'hall')">מארחת אולם</button>
-                <button class="hostess-terrace" onclick="assignWorker('${workerName}', 'hostess', 'terrace')">מארחת טרסה</button>
-                <button class="tastings" onclick="assignWorker('${workerName}', 'tastings')">טעימות</button>
-            </div>`;
-        lists.available.appendChild(listItem);
+        const li = document.createElement("li");
+        li.className = "user-item";
+        li.innerHTML = `<span class="user-name">${workerName}</span><div class="assign-buttons"><button class="runner" onclick="assignWorker('${workerName}', 'runners')">ראנר</button><button class="waiter-hall" onclick="assignWorker('${workerName}', 'waiters', 'hall')">מלצר אולם</button><button class="waiter-terrace" onclick="assignWorker('${workerName}', 'waiters', 'terrace')">מלצר טרסה</button><button class="hostess-hall" onclick="assignWorker('${workerName}', 'hostess', 'hall')">מארחת אולם</button><button class="hostess-terrace" onclick="assignWorker('${workerName}', 'hostess', 'terrace')">מארחת טרסה</button><button class="tastings" onclick="assignWorker('${workerName}', 'tastings')">טעימות</button></div>`;
+        lists.available.appendChild(li);
     });
-    
-    const createAssignedItem = (worker, role, subRole = null) => {
-        const item = document.createElement("li");
-        item.textContent = worker.name;
-        item.title = "לחץ להסרה";
-        item.onclick = () => unassignWorker(worker.name, role, subRole);
-        return item;
+
+    const createAssignedItem = (worker, role, subRole) => {
+        const li = document.createElement("li");
+        li.textContent = worker.name;
+        li.title = "לחץ להסרה";
+        li.onclick = () => unassignWorker(worker.name, role, subRole);
+        return li;
     };
     
-    (assignedForDay.runners || []).forEach(worker => lists.runners.appendChild(createAssignedItem(worker, 'runners')));
-    (assignedForDay.waiters?.hall || []).forEach(worker => lists.waitersHall.appendChild(createAssignedItem(worker, 'waiters', 'hall')));
-    (assignedForDay.waiters?.terrace || []).forEach(worker => lists.waitersTerrace.appendChild(createAssignedItem(worker, 'waiters', 'terrace')));
-    (assignedForDay.hostess?.hall || []).forEach(worker => lists.hostessHall.appendChild(createAssignedItem(worker, 'hostess', 'hall')));
-    (assignedForDay.hostess?.terrace || []).forEach(worker => lists.hostessTerrace.appendChild(createAssignedItem(worker, 'hostess', 'terrace')));
-    (assignedForDay.tastings || []).forEach(worker => lists.tastings.appendChild(createAssignedItem(worker, 'tastings')));
+    (assignedForDay.runners || []).forEach(w => lists.runners.appendChild(createAssignedItem(w, 'runners')));
+    (assignedForDay.waiters?.hall || []).forEach(w => lists.waitersHall.appendChild(createAssignedItem(w, 'waiters', 'hall')));
+    (assignedForDay.waiters?.terrace || []).forEach(w => lists.waitersTerrace.appendChild(createAssignedItem(w, 'waiters', 'terrace')));
+    (assignedForDay.hostess?.hall || []).forEach(w => lists.hostessHall.appendChild(createAssignedItem(w, 'hostess', 'hall')));
+    (assignedForDay.hostess?.terrace || []).forEach(w => lists.hostessTerrace.appendChild(createAssignedItem(w, 'hostess', 'terrace')));
+    (assignedForDay.tastings || []).forEach(w => lists.tastings.appendChild(createAssignedItem(w, 'tastings')));
 
     document.getElementById('availableWorkersTitle').textContent = `עובדים זמינים (${availableWorkers.length})`;
     document.getElementById('runnersTitle').textContent = `ראנרים (${(assignedForDay.runners || []).length})`;
@@ -641,36 +512,32 @@ const updateWorkerLists = (day) => {
 const assignWorker = (workerName, role, subRole = null) => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
     const workerData = { name: workerName };
+    const dayAssignments = assignments[day];
 
     if (subRole) {
-        if (!assignments[day][role][subRole].some(w => w.name === workerName)) {
-            assignments[day][role][subRole].push(workerData);
-        }
+        if (!dayAssignments[role][subRole].some(w => w.name === workerName)) dayAssignments[role][subRole].push(workerData);
     } else {
-        if (!assignments[day][role].some(w => w.name === workerName)) {
-            assignments[day][role].push(workerData);
-        }
+        if (!dayAssignments[role].some(w => w.name === workerName)) dayAssignments[role].push(workerData);
     }
     updateWorkerLists(day);
-    storage.saveData(assignments, allDaysData);
 };
 
 const unassignWorker = (workerName, role, subRole = null) => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
+    const dayAssignments = assignments[day];
+    
     if (subRole) {
-        assignments[day][role][subRole] = assignments[day][role][subRole].filter(w => w.name !== workerName);
+        dayAssignments[role][subRole] = dayAssignments[role][subRole].filter(w => w.name !== workerName);
     } else {
-        assignments[day][role] = assignments[day][role].filter(w => w.name !== workerName);
+        dayAssignments[role] = dayAssignments[role].filter(w => w.name !== workerName);
     }
     updateWorkerLists(day);
-    storage.saveData(assignments, allDaysData);
 };
 
 const saveArrivalTime = () => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
     if (assignments[day]) {
         assignments[day].arrivalTime = document.getElementById('arrivalTimeInput').value.trim();
-        storage.saveData(assignments, allDaysData);
     }
 };
 
@@ -681,31 +548,21 @@ const addAvailableWorker = () => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
     
     if (!allDaysData[day]) allDaysData[day] = [];
-
     if (allDaysData[day].includes(trimmedName)) {
-        alert(`העובד "${trimmedName}" כבר קיים ברשימת הזמינים ליום זה.`);
+        alert(`העובד "${trimmedName}" כבר קיים ברשימה.`);
         return;
     }
-    
     allDaysData[day].push(trimmedName);
     updateWorkerLists(day);
-    storage.saveData(assignments, allDaysData);
 };
 
 const filterAvailableWorkers = () => {
-    const input = document.getElementById('workerSearchInput');
-    const filter = input.value.toLowerCase();
-    const ul = document.getElementById('availableWorkersList');
-    const li = ul.getElementsByClassName('user-item');
-    for (let i = 0; i < li.length; i++) {
-        const span = li[i].getElementsByClassName('user-name')[0];
-        li[i].style.display = (span.textContent.toLowerCase().indexOf(filter) > -1) ? "flex" : "none";
-    }
+    const filter = document.getElementById('workerSearchInput').value.toLowerCase();
+    document.querySelectorAll('#availableWorkersList .user-item').forEach(li => {
+        const name = li.querySelector('.user-name').textContent.toLowerCase();
+        li.style.display = name.includes(filter) ? "flex" : "none";
+    });
 };
-
-// ============================================================================
-// ==================== פונקציות ייבוא/ייצוא/איפוס ====================
-// ============================================================================
 
 const showSummary = () => {
     storage.saveData(assignments, allDaysData);
@@ -713,13 +570,17 @@ const showSummary = () => {
     window.location.href = 'index.html';
 };
 
+/**
+ * כפתור "התחלת סידור חדש" - מבצע איפוס מלא
+ * מוחק את כל הנתונים השמורים (שיבוצים ועובדים ידניים) מה-localStorage
+ * ומטעין מחדש את הדף כדי למשוך רשימה נקייה מה-Sheets.
+ */
 const resetAllAssignments = () => {
-    if (confirm("האם אתה בטוח שברצונך לאפס את כל השיבוצים?")) {
-        assignments = {};
-        // לא מאפסים את allDaysData כדי לשמור על העובדים הידניים
-        storage.saveData(assignments, allDaysData); // שמירת השיבוצים הריקים
-        renderTable(Object.keys(allDaysData));
-        alert("כל השיבוצים נמחקו.");
+    const confirmMessage = "האם אתה בטוח?\nפעולה זו תמחק לצמיתות את כל השיבוצים וגם את כל העובדים שהוספת ידנית.";
+    if (confirm(confirmMessage)) {
+        storage.clearAllData();
+        alert("כל הנתונים נמחקו. המערכת תטען מחדש עם נתונים נקיים מהגיליון.");
+        location.reload();
     }
 };
 
@@ -730,24 +591,16 @@ const exportData = () => {
 const importData = (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
-    if (!confirm("ייבוא הקובץ יחליף את כל הנתונים הנוכחיים. האם להמשיך?")) {
-        event.target.value = '';
-        return;
+    if (confirm("ייבוא הקובץ יחליף את כל הנתונים הנוכחיים. האם להמשיך?")) {
+        storage.importFromFile(file, (importedData) => {
+            assignments = importedData.assignments || {};
+            allDaysData = importedData.allDaysData || {};
+            storage.saveData(assignments, allDaysData);
+            renderTable(Object.keys(allDaysData));
+        });
     }
-
-    storage.importFromFile(file, (importedData) => {
-        assignments = importedData.assignments || {};
-        allDaysData = importedData.allDaysData || {};
-        storage.saveData(assignments, allDaysData);
-        renderTable(Object.keys(allDaysData));
-        event.target.value = '';
-    });
+    event.target.value = '';
 };
-
-// ============================================================================
-// ==================== Event Listeners ====================
-// ============================================================================
 
 window.onclick = (event) => {
     if (event.target == document.getElementById("assignmentModal")) {
@@ -757,15 +610,7 @@ window.onclick = (event) => {
 
 window.addEventListener('beforeunload', () => {
     storage.saveData(assignments, allDaysData);
-    storage.stopAutoSave();
 });
-
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        storage.saveData(assignments, allDaysData);
-    }
-});
-
 </script>
 
 </body>
