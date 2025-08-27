@@ -513,7 +513,6 @@ class WorkScheduleStorage {
         version: "1.0"
       };
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dataToSave));
-      // console.log('Data saved to localStorage:', dataToSave); // For debugging
       return true;
     } catch (error) {
       console.error('שגיאה בשמירת נתונים:', error);
@@ -603,7 +602,6 @@ class WorkScheduleStorage {
       clearInterval(this.autoSaveTimer);
     }
     this.autoSaveTimer = setInterval(() => {
-        // We only need to save assignments automatically. allDaysData is synced on load.
       this.saveData(assignments, allDaysData); 
     }, this.AUTO_SAVE_INTERVAL);
   }
@@ -672,7 +670,6 @@ const parseCsvData = (csvText) => {
       if (header && values[index]) freshDaysData[header].push(values[index]);
     });
   }
-  // Remove duplicates
   Object.keys(freshDaysData).forEach(day => {
       freshDaysData[day] = [...new Set(freshDaysData[day])];
   });
@@ -704,9 +701,9 @@ const getAssignmentCount = (day) => {
     + (dayAssignments.tastings?.length || 0);
 };
 
-// ========================== [תיקון מרכזי] לוגיקת טעינת האפליקציה ==========================
 const initializeApp = async () => {
-  // 1. טען שיבוצים שמורים מהזיכרון המקומי
+  // [הבטחת המשכיות] 1. טען שיבוצים שמורים מהזיכרון המקומי
+  // זה החלק שדואג שהשיבוצים שלך יחכו לך כשתחזור לדף.
   const savedData = storage.loadData();
   if (savedData && savedData.assignments) {
     assignments = savedData.assignments;
@@ -715,23 +712,13 @@ const initializeApp = async () => {
   }
 
   try {
-    // 2. תמיד תביא את רשימת העובדים העדכנית מ-Google Sheets
     const { headers, freshDaysData } = await tryFetchData();
-
-    // 3. הגדר את רשימת העובדים הזמינים (allDaysData) אך ורק לפי מה שהגיע מהגיליון
-    // זה מבטיח שהרשימה תמיד מסונכרנת ולא מכילה עובדים ישנים או ידניים
     allDaysData = freshDaysData;
-
-    // 4. שמור את המצב המעודכן (שיבוצים ישנים + רשימת עובדים חדשה)
     storage.saveData(assignments, allDaysData);
-    
-    // 5. הצג את הטבלה והתחל שמירה אוטומטית
     renderTable(headers);
     showSuccess();
     storage.startAutoSave(assignments, allDaysData);
-
   } catch (error) {
-    // במקרה של שגיאת רשת, נשתמש בנתונים השמורים אם קיימים
     if (savedData && savedData.allDaysData) {
       allDaysData = savedData.allDaysData;
       const headers = Object.keys(allDaysData);
@@ -768,7 +755,6 @@ const openModal = (day) => {
 
 const closeModal = () => {
   document.getElementById("assignmentModal").style.display = "none";
-  // שמירה אוטומטית תטפל בזה, אבל אפשר לשמור כאן במפורש כדי להבטיח
   storage.saveData(assignments, allDaysData);
   renderTable(Object.keys(allDaysData));
 };
@@ -785,19 +771,9 @@ const updateWorkerLists = (day) => {
   };
 
   Object.values(lists).forEach(list => (list.innerHTML = ''));
-
   const assignedForDay = assignments[day];
   const allAvailableForDay = allDaysData[day] || [];
-  
-  const assignedNames = new Set([
-    ...assignedForDay.runners.map(w => w.name),
-    ...assignedForDay.waiters.hall.map(w => w.name),
-    ...assignedForDay.waiters.terrace.map(w => w.name),
-    ...assignedForDay.hostess.hall.map(w => w.name),
-    ...assignedForDay.hostess.terrace.map(w => w.name),
-    ...assignedForDay.tastings.map(w => w.name)
-  ]);
-
+  const assignedNames = new Set([...assignedForDay.runners.map(w => w.name), ...assignedForDay.waiters.hall.map(w => w.name), ...assignedForDay.waiters.terrace.map(w => w.name), ...assignedForDay.hostess.hall.map(w => w.name), ...assignedForDay.hostess.terrace.map(w => w.name), ...assignedForDay.tastings.map(w => w.name)]);
   const availableWorkers = allAvailableForDay.filter(name => name && !assignedNames.has(name));
   
   document.getElementById('availableWorkersTitle').textContent = `עובדים זמינים (${availableWorkers.length})`;
@@ -882,15 +858,11 @@ const addAvailableWorker = () => {
     if (!workerName || workerName.trim() === '') return;
     const trimmedName = workerName.trim();
     const day = document.getElementById("assignmentModal").dataset.currentDay;
-    
     if (!allDaysData[day]) allDaysData[day] = [];
-    
     if (allDaysData[day].includes(trimmedName)) {
         alert(`העובד "${trimmedName}" כבר קיים ברשימת הזמינים ליום זה.`);
         return;
     }
-    
-    // הוספה זמנית לרשימה הנוכחית בלבד
     allDaysData[day].push(trimmedName);
     updateWorkerLists(day);
     storage.updateSaveStatus('warning', 'עובד הוסף זמנית. הוא לא יישמר לאחר רענון הדף.');
@@ -908,12 +880,12 @@ const filterAvailableWorkers = () => {
   }
 };
 
-// ========================== [תיקון] פונקציות ייבוא/ייצוא/איפוס ==========================
 const showSummary = () => {
-  // 1. בצע שמירה ידנית של המצב הנוכחי ל-localStorage כדי להבטיח שהנתונים עדכניים
+  // [הבטחת שמירה] 1. בצע שמירה ידנית של המצב הנוכחי ל-localStorage
+  // זה מבטיח שהשיבוצים יישמרו גם אם המשתמש יסגור את הדפדפן מדף הסיכום.
   storage.saveData(assignments, allDaysData);
   storage.updateSaveStatus('success', 'השיבוצים נשמרו. עובר לדף הסיכום...');
-
+  
   // 2. העבר את הנתונים העדכניים ל-sessionStorage עבור דף הסיכום
   sessionStorage.setItem('workSchedule', JSON.stringify(assignments));
   
@@ -924,12 +896,14 @@ const showSummary = () => {
 const resetAllAssignments = async () => {
   const confirmMessage = "האם אתה בטוח שברצונך לאפס את כל השיבוצים? פעולה זו תמחק את כל הנתונים השמורים ולא ניתן לבטלה.";
   if (confirm(confirmMessage)) {
+    // [איפוס מלא] מחיקת כל הנתונים השמורים מהזיכרון ומהדפדפן
     assignments = {};
     allDaysData = {};
-    storage.clearAllData();
+    storage.clearAllData(); // <-- הפעולה הזו מוחקת את הזיכרון לצמיתות
+    
     document.getElementById("loadingMessage").style.display = "block";
     document.getElementById("daysTable").style.display = "none";
-    // טען הכל מחדש
+    // טען הכל מחדש מההתחלה
     await initializeApp();
   }
 };
@@ -955,14 +929,12 @@ const importData = (event) => {
   });
 };
 
-// ========================== אירועים ==========================
 window.onclick = (event) => {
   if (event.target == document.getElementById("assignmentModal")) {
     closeModal();
   }
 };
 window.addEventListener('beforeunload', () => {
-  // שמירה אחרונה לפני סגירת הדף
   storage.saveData(assignments, allDaysData);
   storage.stopAutoSave();
 });
