@@ -115,13 +115,14 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let col = 0; col < totalColumns; col++) {
                 const dayColumn = document.createElement('div');
                 dayColumn.className = 'day-column';
-
+                
                 const dayTitle = document.createElement('h3');
                 dayTitle.className = 'day-title';
-                dayTitle.textContent = col === 0 ? day : `${day} - המשך`;
+                // שינוי: כותרת נכונה לעמודת המשך
+                dayTitle.textContent = col === 0 ? day : `המשך ${day}`;
                 dayColumn.appendChild(dayTitle);
-
-                // הוסף שעת הגעה בכל עמודה אם רוצים, אחרת רק בעמודה הראשונה
+                
+                // שינוי: הצגת שעת הגעה בכל עמודות היום
                 if (dayData.arrivalTime) {
                     const arrivalTimeEl = document.createElement('p');
                     arrivalTimeEl.className = 'arrival-time';
@@ -155,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- ייצוא כתמונה ארוכה ---
+// --- ייצוא כתמונה באיכות גבוהה ---
 document.getElementById('exportImageButton').addEventListener('click', async () => {
     const element = document.getElementById('capture');
     const btn = document.getElementById('exportImageButton');
@@ -163,20 +164,22 @@ document.getElementById('exportImageButton').addEventListener('click', async () 
     
     btn.disabled = true;
     btn.textContent = 'מכין תמונה...';
-    backBtn.style.display = 'none';
+    backBtn.style.display = 'none'; // הסתר כפתורים לפני הצילום
 
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 150)); // תן לממשק להתעדכן
 
     try {
         const canvas = await html2canvas(element, { 
-            scale: 2,
+            // שינוי: העלאת האיכות באופן משמעותי
+            scale: 3, 
             useCORS: true,
-            backgroundColor: '#f8f9fa'
+            backgroundColor: '#f8f9fa' // צבע רקע למניעת בעיות שקיפות
         });
         
+        // יצירת קובץ והורדה
         const link = document.createElement('a');
         link.download = `work-schedule-${getFormattedDate()}.png`;
-        link.href = canvas.toDataURL('image/png', 1.0);
+        link.href = canvas.toDataURL('image/png', 1.0); // 1.0 = איכות PNG מקסימלית
         link.click();
 
     } catch (error) {
@@ -185,7 +188,7 @@ document.getElementById('exportImageButton').addEventListener('click', async () 
     } finally {
         btn.disabled = false;
         btn.textContent = 'ייצוא כתמונה';
-        backBtn.style.display = 'inline-flex';
+        backBtn.style.display = 'inline-flex'; // החזר כפתורים לתצוגה
     }
 });
 
