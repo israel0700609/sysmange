@@ -9,68 +9,123 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 
-<!-- ספריות לייצוא PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
 :root {
-    --primary-color: #007bff; --light-gray: #f8f9fa; --text-color: #313e4b;
-    --border-radius: 0.5rem; --runner-bg: #28a745; --waiter-hall-bg: #38516d;
-    --waiter-terrace-bg: #022346; --hostess-hall-bg: #96009b;
-    --hostess-terrace-bg: #ff7fc7; --tastings-bg: #17a2b8;
+    --primary-color: #007bff; --success-color: #28a745; --danger-color: #dc3545;
+    --light-gray: #f8f9fa; --text-color: #313e4b; --border-color: #dee2e6;
+    --shadow-md: 0 .5rem 1rem rgba(0,0,0,.15); --border-radius: 0.5rem;
+    --runner-bg: #28a745; --waiter-hall-bg: #38516d; --waiter-terrace-bg: #022346;
+    --hostess-hall-bg: #96009b; --hostess-terrace-bg: #ff7fc7; --tastings-bg: #17a2b8;
 }
+
 body {
     font-family: 'Rubik', sans-serif; direction: rtl; padding: 20px;
     background-color: var(--light-gray); color: var(--text-color);
 }
+
 .container {
     max-width: 95%; margin: 0 auto; background-color: #fff;
-    padding: 30px; border-radius: var(--border-radius); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+    padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-md);
 }
+
 h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
+
+.save-status {
+    background-color: #d1ecf1; color: #0c5460; padding: 10px 15px;
+    border-radius: var(--border-radius); margin-bottom: 20px; text-align: center;
+    border: 1px solid #bee5eb; font-weight: 500;
+}
+.save-status.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+.save-status.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+
 .legend {
     display: flex; flex-wrap: wrap; justify-content: center;
     gap: 15px; margin-bottom: 30px;
 }
+
 .legend-item { display: flex; align-items: center; gap: 8px; font-size: 1rem; }
-.legend-color { width: 20px; height: 20px; border-radius: 4px; display: inline-block; }
+
+.legend-color {
+    width: 20px; height: 20px; border-radius: 4px; display: inline-block;
+}
+
 #scheduleByDayContainer {
     display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 20px;
 }
+
 .day-column {
     flex: 1 1 220px; background-color: #f2f2f2; padding: 15px;
-    border-radius: var(--border-radius); text-align: center;
+    border-radius: var(--border-radius); box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-align: center;
 }
+
 .day-title {
     font-size: 1.5rem; font-weight: 700;
     margin-bottom: 15px; color: var(--primary-color);
 }
-.day-title .arrival-time { font-weight: 500; color: #555; }
+
+.day-title .arrival-time {
+    font-weight: 500; color: #555;
+}
+
 .worker-list { list-style: none; padding: 0; margin: 0; }
-.worker-item { padding: 8px; margin-bottom: 8px; border-radius: 5px; font-weight: 500; color: white; }
+
+.worker-item {
+    padding: 8px; margin-bottom: 8px; border-radius: 5px;
+    font-weight: 500; color: white;
+}
+
 .role-runners { background-color: var(--runner-bg); }
 .role-waiters-hall { background-color: var(--waiter-hall-bg); }
 .role-waiters-terrace { background-color: var(--waiter-terrace-bg); }
 .role-hostess-hall { background-color: var(--hostess-hall-bg); color: var(--text-color); }
 .role-hostess-terrace { background-color: var(--hostess-terrace-bg); color: var(--text-color); }
 .role-tastings { background-color: var(--tastings-bg); }
-#no-data-message { display: none; text-align: center; font-size: 1.2rem; }
-.navigation-buttons { text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 15px; }
-.nav-button {
-    padding: 12px 25px; font-size: 1.1rem; color: #fff; background-color: var(--primary-color);
-    border: none; border-radius: var(--border-radius); cursor: pointer; text-decoration: none; transition: all 0.2s ease;
+
+#no-data-message {
+    display: none; text-align: center; font-size: 1.2rem;
+    padding: 40px; background-color: #fff3cd; color: #856404;
+    border-radius: var(--border-radius); border: 1px solid #ffeaa7;
 }
-.nav-button:hover { filter: brightness(110%); }
-#export-pdf-btn { background-color: #6c757d; }
-#export-pdf-btn:disabled { background-color: #aaa; cursor: not-allowed; }
+
+.navigation-buttons {
+    text-align: center; margin-top: 30px; display: flex;
+    justify-content: center; gap: 15px; flex-wrap: wrap;
+}
+
+.nav-button {
+    padding: 12px 25px; font-size: 1.1rem; color: #fff;
+    border: none; border-radius: var(--border-radius); cursor: pointer;
+    text-decoration: none; transition: all 0.2s ease; font-weight: 500;
+    display: inline-block;
+}
+
+.nav-button:hover {
+    filter: brightness(110%); transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+#backButton { background-color: var(--primary-color); }
+#exportButton { background-color: #6c757d; }
+#exportButton:disabled { background-color: #aaa; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+    body { padding: 10px; }
+    .container { padding: 15px; }
+    .navigation-buttons { flex-direction: column; align-items: center; }
+    .nav-button { width: 80%; max-width: 300px; }
+}
 </style>
 </head>
 <body>
-
 <div id="capture">
     <div class="container">
         <h2>סיכום סידור עבודה - לפי ימים</h2>
+        <div id="saveStatus" class="save-status" style="display: none;"></div>
+
         <div class="legend">
             <div class="legend-item"><span class="legend-color" style="background-color: var(--runner-bg);"></span>ראנר</div>
             <div class="legend-item"><span class="legend-color" style="background-color: var(--waiter-hall-bg);"></span>מלצר אולם</div>
@@ -79,30 +134,77 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
             <div class="legend-item"><span class="legend-color" style="background-color: var(--hostess-hall-bg);"></span>מארחת אולם</div>
             <div class="legend-item"><span class="legend-color" style="background-color: var(--hostess-terrace-bg);"></span>מארחת טרסה</div>
         </div>
+
         <div id="scheduleByDayContainer"></div>
-        <div id="no-data-message"><p>לא נמצא סידור עבודה. יש לחזור לדף הראשי ולשבץ עובדים תחילה.</p></div>
+
+        <div id="no-data-message">
+            <h3>אין נתוני שיבוץ</h3>
+            <p>לא נמצא סידור עבודה שמור. יש לחזור לדף השיבוץ ולשבץ עובדים תחילה.</p>
+        </div>
     </div>
 </div>
 
 <div class="navigation-buttons">
-    <a href="main.html" class="nav-button">חזרה לדף השיבוץ</a>
-    <button id="export-pdf-btn" class="nav-button">ייצוא ל-PDF</button>
+    <a href="main.html" id="backButton" class="nav-button">חזרה לדף השיבוץ</a>
+    <button id="exportButton" class="nav-button">ייצוא ל-PDF</button>
 </div>
 
 <script>
+class SummaryStorage {
+    constructor() {
+        this.STORAGE_KEY = 'workScheduleData';
+        this.SESSION_KEY = 'workSchedule';
+    }
+    loadScheduleData() {
+        try {
+            let data = localStorage.getItem(this.STORAGE_KEY);
+            if (data) {
+                const parsedData = JSON.parse(data);
+                if (parsedData.assignments) {
+                    this.updateSaveStatus('success', `נתונים נטענו מזיכרון קבוע (${new Date(parsedData.timestamp).toLocaleString('he-IL')})`);
+                    return parsedData.assignments;
+                }
+            }
+            data = sessionStorage.getItem(this.SESSION_KEY);
+            if (data) {
+                this.updateSaveStatus('info', 'נתונים נטענו מהפעלה נוכחית');
+                return JSON.parse(data);
+            }
+            return null;
+        } catch (error) {
+            console.error('שגיאה בטעינת נתונים:', error);
+            this.updateSaveStatus('error', 'שגיאה בטעינת נתוני השיבוץ');
+            return null;
+        }
+    }
+    updateSaveStatus(type, message) {
+        const statusEl = document.getElementById('saveStatus');
+        if (!statusEl) return;
+        statusEl.className = `save-status ${type}`;
+        statusEl.textContent = message;
+        statusEl.style.display = 'block';
+        setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
+    }
+}
+
+const storage = new SummaryStorage();
+
 document.addEventListener('DOMContentLoaded', () => {
-    const scheduleDataString = sessionStorage.getItem('workSchedule');
-    if (!scheduleDataString) {
+    const schedule = storage.loadScheduleData();
+    if (!schedule || Object.keys(schedule).length === 0) {
         document.getElementById('no-data-message').style.display = 'block';
-        document.getElementById('export-pdf-btn').style.display = 'none';
+        document.getElementById('exportButton').style.display = 'none';
+        document.querySelector('.legend').style.display = 'none';
         return;
     }
-    const schedule = JSON.parse(scheduleDataString);
+    displaySchedule(schedule);
+});
+
+function displaySchedule(schedule) {
     const container = document.getElementById('scheduleByDayContainer');
     const dayOrder = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
     const MAX_PER_COLUMN = 30;
     let hasAssignments = false;
-
     dayOrder.forEach(day => {
         if (schedule[day]) {
             const dayData = schedule[day];
@@ -113,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const tastings = (dayData.tastings || []).map(mapWorker).sort((a,b) => a.name.localeCompare(b.name, 'he'));
             const hostessHall = (dayData.hostess?.hall || []).map(mapWorker).sort((a,b) => a.name.localeCompare(b.name, 'he'));
             const hostessTerrace = (dayData.hostess?.terrace || []).map(mapWorker).sort((a,b) => a.name.localeCompare(b.name, 'he'));
-
             const addRole = (workers, role) => workers.forEach(w => w.role = role);
             addRole(runners, 'role-runners');
             addRole(waitersHall, 'role-waiters-hall');
@@ -121,108 +222,146 @@ document.addEventListener('DOMContentLoaded', () => {
             addRole(tastings, 'role-tastings');
             addRole(hostessHall, 'role-hostess-hall');
             addRole(hostessTerrace, 'role-hostess-terrace');
-
             const allWorkers = [...runners, ...waitersHall, ...waitersTerrace, ...tastings, ...hostessHall, ...hostessTerrace];
-
             if (allWorkers.length > 0) {
                 hasAssignments = true;
                 const totalColumns = Math.ceil(allWorkers.length / MAX_PER_COLUMN);
-
                 for (let col = 0; col < totalColumns; col++) {
                     const dayColumn = document.createElement('div');
                     dayColumn.className = 'day-column';
                     const dayTitle = document.createElement('h3');
                     dayTitle.className = 'day-title';
                     let titleHTML = col === 0 ? day : `${day} - המשך`;
-                    if (dayData.arrivalTime) titleHTML += ` <span class="arrival-time">- ${dayData.arrivalTime}</span>`;
+                    if (dayData.arrivalTime) {
+                        titleHTML += ` <span class="arrival-time">- ${dayData.arrivalTime}</span>`;
+                    }
                     dayTitle.innerHTML = titleHTML;
-
                     dayColumn.appendChild(dayTitle);
-
                     const workerList = document.createElement('ul');
                     workerList.className = 'worker-list';
                     const startIndex = col * MAX_PER_COLUMN;
                     const endIndex = Math.min(startIndex + MAX_PER_COLUMN, allWorkers.length);
                     const workersInThisColumn = allWorkers.slice(startIndex, endIndex);
-
                     workersInThisColumn.forEach(worker => {
                         const workerItem = document.createElement('li');
                         workerItem.className = `worker-item ${worker.role}`;
                         workerItem.textContent = worker.name;
                         workerList.appendChild(workerItem);
                     });
-
                     dayColumn.appendChild(workerList);
                     container.appendChild(dayColumn);
                 }
             }
         }
     });
-
     if (!hasAssignments) {
         document.getElementById('no-data-message').style.display = 'block';
-        document.getElementById('export-pdf-btn').style.display = 'none';
+        document.getElementById('exportButton').style.display = 'none';
+        document.querySelector('.legend').style.display = 'none';
+    } else {
+        updateHeaderWithStats(schedule);
     }
-});
+}
 
-// ==================== PDF דף אחד ארוך ====================
-document.getElementById('export-pdf-btn').addEventListener('click', async () => {
-    const exportButton = document.getElementById('export-pdf-btn');
+function updateHeaderWithStats(schedule) {
+    const stats = calculateScheduleStats(schedule);
+    const headerEl = document.querySelector('h2');
+    headerEl.innerHTML = `
+        סיכום סידור עבודה - לפי ימים<br>
+        <small style="font-size: 0.6em; color: #6c757d; font-weight: normal;">
+            ${stats.totalDays} ימים | ${stats.totalUniqueWorkers} עובדים
+        </small>
+    `;
+}
+
+function calculateScheduleStats(schedule) {
+    let totalDays = 0;
+    const uniqueWorkers = new Set();
+    Object.keys(schedule).forEach(day => {
+        const dayData = schedule[day];
+        const dayWorkerCount = (dayData.runners?.length || 0) + (dayData.waiters?.hall?.length || 0) + (dayData.waiters?.terrace?.length || 0) + (dayData.hostess?.hall?.length || 0) + (dayData.hostess?.terrace?.length || 0) + (dayData.tastings?.length || 0);
+        if (dayWorkerCount > 0) {
+            totalDays++;
+            const allWorkersForDay = [
+                ...(dayData.runners || []), 
+                ...(dayData.waiters?.hall || []), 
+                ...(dayData.waiters?.terrace || []), 
+                ...(dayData.hostess?.hall || []), 
+                ...(dayData.hostess?.terrace || []), 
+                ...(dayData.tastings || [])
+            ];
+            allWorkersForDay.forEach(worker => {
+                if (worker && worker.name) uniqueWorkers.add(worker.name);
+            });
+        }
+    });
+    return { totalDays, totalUniqueWorkers: uniqueWorkers.size };
+}
+
+
+// ==================== ייצוא PDF מתוקן ====================
+document.getElementById('exportButton').addEventListener('click', async () => {
+    const exportButton = document.getElementById('exportButton');
+    const backButton = document.getElementById('backButton');
     const originalButtonText = exportButton.textContent;
     const elementToCapture = document.getElementById('capture');
-    let cloneForExport = null;
+
+    exportButton.textContent = 'מייצא, נא להמתין...';
+    exportButton.disabled = true;
+    backButton.style.display = 'none';
+    exportButton.style.display = 'none';
+
+    const originalBodyStyle = document.body.style.cssText;
+    const originalHtmlStyle = document.documentElement.style.cssText;
+    document.body.style.height = 'auto';
+    document.body.style.overflow = 'visible';
+    document.documentElement.style.height = 'auto';
+    document.documentElement.style.overflow = 'visible';
+
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     try {
-        exportButton.textContent = 'מכין לייצוא...';
-        exportButton.disabled = true;
-
-        cloneForExport = elementToCapture.cloneNode(true);
-        cloneForExport.style.position = 'absolute';
-        cloneForExport.style.top = '-9999px';
-        cloneForExport.style.left = '0px';
-        cloneForExport.style.width = elementToCapture.scrollWidth + 'px';
-        cloneForExport.style.height = elementToCapture.scrollHeight + 'px';
-        document.body.appendChild(cloneForExport);
-
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        exportButton.textContent = 'מייצא, נא להמתין...';
-
-        const canvas = await html2canvas(cloneForExport, {
-            scale: 4,
+        const { jsPDF } = window.jspdf;
+        const canvas = await html2canvas(elementToCapture, {
+            scale: 2.5,
             useCORS: true,
             allowTaint: true,
-            width: cloneForExport.scrollWidth,
-            height: cloneForExport.scrollHeight,
-            windowWidth: cloneForExport.scrollWidth,
-            windowHeight: cloneForExport.scrollHeight
+            windowWidth: elementToCapture.scrollWidth,
+            windowHeight: elementToCapture.scrollHeight,
+            scrollY: 0
         });
 
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-
-        const pdfWidth = 210; // רוחב PDF במ"מ
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width; // גובה מותאם אישית
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasHeight / canvasWidth;
+        const pdfWidth = 210; // A4 width in mm
+        const pdfHeight = pdfWidth * ratio;
 
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
             format: [pdfWidth, pdfHeight]
         });
-
+        
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save("work-schedule-final.pdf");
+
+        const date = new Date();
+        const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+        pdf.save(`work-schedule-${formattedDate}.pdf`);
 
     } catch (error) {
-        console.error("שגיאה במהלך ייצוא PDF:", error);
+        console.error("An error occurred during PDF export:", error);
         alert("אירעה שגיאה במהלך ייצוא ה-PDF.");
     } finally {
-        if (cloneForExport) document.body.removeChild(cloneForExport);
+        document.body.style.cssText = originalBodyStyle;
+        document.documentElement.style.cssText = originalHtmlStyle;
         exportButton.textContent = originalButtonText;
         exportButton.disabled = false;
+        exportButton.style.display = 'inline-block';
+        backButton.style.display = 'inline-block';
     }
 });
 </script>
-
 </body>
 </html>
