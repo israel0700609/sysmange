@@ -112,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dayOrder = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
     const MAX_PER_COLUMN = 30;
     let hasAssignments = false;
+
     dayOrder.forEach(day => {
         if (schedule[day]) {
             const dayData = schedule[day];
@@ -122,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tastings = (dayData.tastings || []).map(mapWorker).sort((a,b) => a.name.localeCompare(b.name, 'he'));
             const hostessHall = (dayData.hostess?.hall || []).map(mapWorker).sort((a,b) => a.name.localeCompare(b.name, 'he'));
             const hostessTerrace = (dayData.hostess?.terrace || []).map(mapWorker).sort((a,b) => a.name.localeCompare(b.name, 'he'));
+
             const addRole = (workers, role) => workers.forEach(w => w.role = role);
             addRole(runners, 'role-runners');
             addRole(waitersHall, 'role-waiters-hall');
@@ -129,43 +131,52 @@ document.addEventListener('DOMContentLoaded', () => {
             addRole(tastings, 'role-tastings');
             addRole(hostessHall, 'role-hostess-hall');
             addRole(hostessTerrace, 'role-hostess-terrace');
+
             const allWorkers = [...runners, ...waitersHall, ...waitersTerrace, ...tastings, ...hostessHall, ...hostessTerrace];
+
             if (allWorkers.length > 0) {
                 hasAssignments = true;
                 const totalColumns = Math.ceil(allWorkers.length / MAX_PER_COLUMN);
+
                 for (let col = 0; col < totalColumns; col++) {
                     const dayColumn = document.createElement('div');
                     dayColumn.className = 'day-column';
+
                     const dayTitle = document.createElement('h3');
                     dayTitle.className = 'day-title';
                     let titleHTML = col === 0 ? day : `${day} - המשך`;
                     if (dayData.arrivalTime) titleHTML += ` <span class="arrival-time">- ${dayData.arrivalTime}</span>`;
                     dayTitle.innerHTML = titleHTML;
+
                     dayColumn.appendChild(dayTitle);
+
                     const workerList = document.createElement('ul');
                     workerList.className = 'worker-list';
                     const startIndex = col * MAX_PER_COLUMN;
                     const endIndex = Math.min(startIndex + MAX_PER_COLUMN, allWorkers.length);
                     const workersInThisColumn = allWorkers.slice(startIndex, endIndex);
+
                     workersInThisColumn.forEach(worker => {
                         const workerItem = document.createElement('li');
                         workerItem.className = `worker-item ${worker.role}`;
                         workerItem.textContent = worker.name;
                         workerList.appendChild(workerItem);
                     });
+
                     dayColumn.appendChild(workerList);
                     container.appendChild(dayColumn);
                 }
             }
         }
     });
+
     if (!hasAssignments) {
         document.getElementById('no-data-message').style.display = 'block';
         document.getElementById('export-pdf-btn').style.display = 'none';
     }
 });
 
-// ==================== קוד ייצוא PDF מתוקן ====================
+// ==================== ייצוא PDF איכותי, דף אחד ארוך ====================
 document.getElementById('export-pdf-btn').addEventListener('click', async () => {
     const exportButton = document.getElementById('export-pdf-btn');
     const originalButtonText = exportButton.textContent;
@@ -176,7 +187,6 @@ document.getElementById('export-pdf-btn').addEventListener('click', async () => 
         exportButton.textContent = 'מכין לייצוא...';
         exportButton.disabled = true;
 
-        // שכפול האלמנט
         cloneForExport = elementToCapture.cloneNode(true);
         cloneForExport.style.position = 'absolute';
         cloneForExport.style.top = '-9999px';
@@ -188,8 +198,9 @@ document.getElementById('export-pdf-btn').addEventListener('click', async () => 
         await new Promise(resolve => setTimeout(resolve, 100));
 
         exportButton.textContent = 'מייצא, נא להמתין...';
+
         const canvas = await html2canvas(cloneForExport, {
-            scale: 2,
+            scale: 4, // איכות גבוהה
             useCORS: true,
             allowTaint: true,
             width: cloneForExport.scrollWidth,
@@ -200,37 +211,17 @@ document.getElementById('export-pdf-btn').addEventListener('click', async () => 
 
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
-        
-        const PDF_PAGE_WIDTH = 210;
-        const PDF_PAGE_HEIGHT = 297;
-        const PAGE_MARGIN = 15;
 
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = imgHeight / imgWidth;
-
-        const pdfImgWidth = PDF_PAGE_WIDTH - (PAGE_MARGIN * 2);
-        const pdfImgHeight = pdfImgWidth * ratio;
+        const pdfWidth = 210; // רוחב A4 במ"מ
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
-            format: 'a4'
+            format: [pdfWidth, pdfHeight] // דף אחד ארוך
         });
 
-        let heightLeft = pdfImgHeight;
-        let position = 0;
-
-        pdf.addImage(imgData, 'PNG', PAGE_MARGIN, 0, pdfImgWidth, pdfImgHeight);
-        heightLeft -= (PDF_PAGE_HEIGHT - PAGE_MARGIN);
-
-        while (heightLeft > 0) {
-            position -= (PDF_PAGE_HEIGHT - (PAGE_MARGIN*2));
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', PAGE_MARGIN, position, pdfImgWidth, pdfImgHeight);
-            heightLeft -= (PDF_PAGE_HEIGHT - PAGE_MARGIN);
-        }
-
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save("work-schedule-final.pdf");
 
     } catch (error) {
