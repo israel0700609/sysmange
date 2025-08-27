@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoVBL5gI9kkyCKWU1BPquCtoR4WEsg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <style>
 :root {
@@ -26,9 +26,9 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
 .legend-item { display: flex; align-items: center; gap: 8px; font-size: 1rem; }
 .legend-color { width: 20px; height: 20px; border-radius: 4px; display: inline-block; }
 #scheduleByDayContainer { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 20px; }
-.day-column { flex: 1 1 220px; background-color: #f2f2f2; padding: 15px; border-radius: var(--border-radius); box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
-.day-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 15px; color: var(--primary-color); }
-.arrival-time { font-size: 1rem; font-weight: 500; color: #6c757d; margin-top: -10px; margin-bottom: 10px; }
+.day-column { flex: 1 1 220px; min-width: 220px; background-color: #f2f2f2; padding: 15px; border-radius: var(--border-radius); box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
+.day-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 5px; color: var(--primary-color); }
+.arrival-time { font-size: 1rem; font-weight: 500; color: #6c757d; margin-top: 0; margin-bottom: 10px; }
 .worker-list { list-style: none; padding: 0; margin: 0; }
 .worker-item { padding: 8px; margin-bottom: 8px; border-radius: 5px; font-weight: 500; color: white; }
 .role-runners { background-color: var(--runner-bg); }
@@ -43,7 +43,6 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
 .nav-button:hover { filter: brightness(110%); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
 #backButton { background-color: var(--primary-color); }
 #exportImageButton { background-color: var(--success-color); }
-#exportPdfButton { background-color: #6c757d; }
 .nav-button:disabled { background-color: #aaa; cursor: not-allowed; }
 @media (max-width: 768px) { body { padding: 10px; } .container { padding: 15px; } .navigation-buttons { flex-direction: column; align-items: center; } .nav-button { width: 80%; max-width: 300px; } }
 </style>
@@ -70,8 +69,7 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
 
 <div class="navigation-buttons">
     <a href="main.html" id="backButton" class="nav-button">חזרה לדף השיבוץ</a>
-    <button id="exportImageButton" class="nav-button">ייצוא כתמונה (מומלץ)</button>
-    <button id="exportPdfButton" class="nav-button">ייצוא ל-PDF</button>
+    <button id="exportImageButton" class="nav-button">ייצוא כתמונה</button>
 </div>
 
 <script>
@@ -79,19 +77,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const scheduleDataString = sessionStorage.getItem('workSchedule');
     const container = document.getElementById('scheduleByDayContainer');
     const noDataMsg = document.getElementById('no-data-message');
-    const exportButtons = document.querySelectorAll('#exportImageButton, #exportPdfButton');
+    const exportButton = document.getElementById('exportImageButton');
 
     if (!scheduleDataString) {
         noDataMsg.style.display = 'block';
-        exportButtons.forEach(btn => btn.style.display = 'none');
+        exportButton.style.display = 'none';
         return;
     }
 
     const schedule = JSON.parse(scheduleDataString);
     const dayOrder = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    const MAX_PER_COLUMN = 30; // מגבלת עובדים לעמודה
     let hasAssignments = false;
 
-    // מיין את הימים לפי הסדר הנכון
     const sortedDays = Object.keys(schedule).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
 
     sortedDays.forEach(day => {
@@ -112,112 +110,83 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (allWorkers.length > 0) {
             hasAssignments = true;
-            const dayColumn = document.createElement('div');
-            dayColumn.className = 'day-column';
-            
-            const dayTitle = document.createElement('h3');
-            dayTitle.className = 'day-title';
-            dayTitle.textContent = day;
-            dayColumn.appendChild(dayTitle);
-            
-            if (dayData.arrivalTime) {
-                const arrivalTimeEl = document.createElement('p');
-                arrivalTimeEl.className = 'arrival-time';
-                arrivalTimeEl.textContent = `שעת הגעה: ${dayData.arrivalTime}`;
-                dayColumn.appendChild(arrivalTimeEl);
-            }
+            const totalColumns = Math.ceil(allWorkers.length / MAX_PER_COLUMN);
 
-            const workerList = document.createElement('ul');
-            workerList.className = 'worker-list';
-            allWorkers.forEach(worker => {
-                const li = document.createElement('li');
-                li.className = `worker-item ${worker.role}`;
-                li.textContent = worker.name;
-                workerList.appendChild(li);
-            });
-            dayColumn.appendChild(workerList);
-            container.appendChild(dayColumn);
+            for (let col = 0; col < totalColumns; col++) {
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'day-column';
+                
+                const dayTitle = document.createElement('h3');
+                dayTitle.className = 'day-title';
+                dayTitle.textContent = col === 0 ? day : `${day} - המשך`;
+                dayColumn.appendChild(dayTitle);
+                
+                // הוסף שעת הגעה רק בעמודה הראשונה של היום
+                if (col === 0 && dayData.arrivalTime) {
+                    const arrivalTimeEl = document.createElement('p');
+                    arrivalTimeEl.className = 'arrival-time';
+                    arrivalTimeEl.textContent = `שעת הגעה: ${dayData.arrivalTime}`;
+                    dayColumn.appendChild(arrivalTimeEl);
+                }
+
+                const workerList = document.createElement('ul');
+                workerList.className = 'worker-list';
+
+                const startIndex = col * MAX_PER_COLUMN;
+                const endIndex = startIndex + MAX_PER_COLUMN;
+                const workersInColumn = allWorkers.slice(startIndex, endIndex);
+
+                workersInColumn.forEach(worker => {
+                    const li = document.createElement('li');
+                    li.className = `worker-item ${worker.role}`;
+                    li.textContent = worker.name;
+                    workerList.appendChild(li);
+                });
+
+                dayColumn.appendChild(workerList);
+                container.appendChild(dayColumn);
+            }
         }
     });
 
     if (!hasAssignments) {
         noDataMsg.style.display = 'block';
-        exportButtons.forEach(btn => btn.style.display = 'none');
+        exportButton.style.display = 'none';
     }
 });
 
-// ==================== פונקציות ייצוא ====================
-const { jsPDF } = window.jspdf;
-
-// --- פתרון 1: ייצוא כתמונה ארוכה (אידיאלי לווטסאפ) ---
+// --- ייצוא כתמונה ארוכה (אידיאלי לווטסאפ) ---
 document.getElementById('exportImageButton').addEventListener('click', async () => {
     const element = document.getElementById('capture');
-    const buttons = document.querySelectorAll('.nav-button');
-    buttons.forEach(btn => btn.disabled = true);
-    document.getElementById('exportImageButton').textContent = 'מכין תמונה...';
+    const btn = document.getElementById('exportImageButton');
+    const backBtn = document.getElementById('backButton');
+    
+    btn.disabled = true;
+    btn.textContent = 'מכין תמונה...';
+    backBtn.style.display = 'none'; // הסתר כפתורים לפני הצילום
 
     await new Promise(r => setTimeout(r, 150)); // תן לממשק להתעדכן
 
     try {
-        const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-        
-        canvas.toBlob(function(blob) {
-            const link = document.createElement('a');
-            link.download = `work-schedule-${getFormattedDate()}.png`;
-            link.href = URL.createObjectURL(blob);
-            link.click();
-            URL.revokeObjectURL(link.href); // נקה את הזיכרון
+        const canvas = await html2canvas(element, { 
+            scale: 2, // רזולוציה טובה
+            useCORS: true,
+            backgroundColor: '#f8f9fa' // צבע רקע למקרה שיש שקיפות
         });
+        
+        // יצירת קובץ והורדה
+        const link = document.createElement('a');
+        link.download = `work-schedule-${getFormattedDate()}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
 
     } catch (error) {
         console.error("שגיאה בייצוא התמונה:", error);
-        alert("אירעה שגיאה. נסה לרענן את הדף.");
+        alert("אירעה שגיאה בייצוא התמונה. נסה לרענן את הדף.");
     } finally {
-        buttons.forEach(btn => btn.disabled = false);
-        document.getElementById('exportImageButton').textContent = 'ייצוא כתמונה (מומלץ)';
-    }
-});
-
-
-// --- פתרון 2: ייצוא ל-PDF מחולק לעמודים (אמין ותמיד עובד) ---
-document.getElementById('exportPdfButton').addEventListener('click', async () => {
-    const element = document.getElementById('capture');
-    const buttons = document.querySelectorAll('.nav-button');
-    buttons.forEach(btn => btn.disabled = true);
-    document.getElementById('exportPdfButton').textContent = 'מכין PDF...';
-    
-    await new Promise(r => setTimeout(r, 150));
-
-    try {
-        const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 210; // A4 width in mm
-        const pageHeight = 295; // A4 height in mm
-        const imgHeight = canvas.height * imgWidth / canvas.width;
-        let heightLeft = imgHeight;
-        
-        const pdf = new jsPDF('p', 'mm');
-        let position = 0;
-        
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-        
-        // חותך את התמונה לעמודים נוספים אם היא ארוכה מדי
-        while (heightLeft >= 0) {
-            position = heightLeft - imgHeight;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-        }
-        
-        pdf.save(`work-schedule-${getFormattedDate()}.pdf`);
-
-    } catch (error) {
-        console.error("שגיאה בייצוא ה-PDF:", error);
-        alert("אירעה שגיאה. נסה לרענן את הדף.");
-    } finally {
-        buttons.forEach(btn => btn.disabled = false);
-        document.getElementById('exportPdfButton').textContent = 'ייצוא ל-PDF';
+        btn.disabled = false;
+        btn.textContent = 'ייצוא כתמונה';
+        backBtn.style.display = 'inline-flex'; // החזר כפתורים לתצוגה
     }
 });
 
