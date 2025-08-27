@@ -2,7 +2,7 @@
 <html lang="he">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>מערכת שיבוץ עובדים</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -286,15 +286,10 @@ class WorkScheduleStorage {
                 version: "1.0"
             };
 
-            // שמירה ראשית
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dataToSave));
-            
-            // שמירת גיבוי
             localStorage.setItem(this.BACKUP_KEY, JSON.stringify(dataToSave));
             
-            // עדכון סטטוס
             this.updateSaveStatus('success', 'הנתונים נשמרו בהצלחה');
-            
             return true;
         } catch (error) {
             console.error('שגיאה בשמירת נתונים:', error);
@@ -308,12 +303,9 @@ class WorkScheduleStorage {
         try {
             let data = localStorage.getItem(this.STORAGE_KEY);
             
-            // אם הנתונים הראשיים לא קיימים, נסה גיבוי
             if (!data) {
                 data = localStorage.getItem(this.BACKUP_KEY);
-                if (data) {
-                    this.updateSaveStatus('warning', 'נטענו נתונים מגיבוי');
-                }
+                if (data) this.updateSaveStatus('warning', 'נטענו נתונים מגיבוי');
             }
 
             if (data) {
@@ -339,11 +331,7 @@ class WorkScheduleStorage {
                 exportDate: new Date().toISOString(),
                 version: "1.0"
             };
-
-            const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
-                type: 'application/json'
-            });
-
+            const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -352,13 +340,10 @@ class WorkScheduleStorage {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-
             this.updateSaveStatus('success', 'הנתונים יוצאו בהצלחה');
-            return true;
         } catch (error) {
             console.error('שגיאה בייצוא:', error);
             this.updateSaveStatus('error', 'שגיאה בייצוא נתונים');
-            return false;
         }
     }
 
@@ -368,8 +353,6 @@ class WorkScheduleStorage {
         reader.onload = (e) => {
             try {
                 const importedData = JSON.parse(e.target.result);
-                
-                // בדיקת תקינות הנתונים
                 if (importedData.assignments && importedData.allDaysData) {
                     callback(importedData);
                     this.updateSaveStatus('success', 'הנתונים יובאו בהצלחה');
@@ -401,14 +384,8 @@ class WorkScheduleStorage {
     // שמירה אוטומטית
     startAutoSave(assignments, allDaysData) {
         if (!this.isAutoSaveEnabled) return;
-
-        if (this.autoSaveTimer) {
-            clearInterval(this.autoSaveTimer);
-        }
-
-        this.autoSaveTimer = setInterval(() => {
-            this.saveData(assignments, allDaysData);
-        }, this.AUTO_SAVE_INTERVAL);
+        if (this.autoSaveTimer) clearInterval(this.autoSaveTimer);
+        this.autoSaveTimer = setInterval(() => this.saveData(assignments, allDaysData), this.AUTO_SAVE_INTERVAL);
     }
 
     stopAutoSave() {
@@ -424,11 +401,7 @@ class WorkScheduleStorage {
         statusEl.className = `save-status ${type}`;
         statusEl.textContent = message;
         statusEl.style.display = 'block';
-
-        // הסתרה אוטומטית אחרי 5 שניות
-        setTimeout(() => {
-            statusEl.style.display = 'none';
-        }, 5000);
+        setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
     }
 }
 
@@ -512,44 +485,52 @@ const getAssignmentCount = (day) => {
 
 // טעינה ראשונית
 const initializeApp = async () => {
-    // טעינת נתונים שמורים
     const savedData = storage.loadData();
+    let savedAssignments = {};
+    let savedAllDaysData = {};
     if (savedData) {
-        assignments = savedData.assignments || {};
-        // שמירה על נתוני הגיליון המקוריים אבל עם עדכונים
-        if (savedData.allDaysData) {
-            allDaysData = savedData.allDaysData;
-        }
+        savedAssignments = savedData.assignments || {};
+        savedAllDaysData = savedData.allDaysData || {};
     }
+    assignments = savedAssignments;
 
     try {
-        // טעינת נתונים חדשים מהגיליון
+        // שלב 1: טעינת הרשימה העדכנית מה-Sheets. זוהי "גרסת האמת" הבסיסית.
         const { headers, freshDaysData } = await tryFetchData();
         
-        // מיזוג נתונים: נתונים חדשים מהגיליון + עדכונים מקומיים
-        Object.keys(freshDaysData).forEach(day => {
-            if (!allDaysData[day]) {
-                allDaysData[day] = freshDaysData[day];
-            } else {
-                // הוספת עובדים חדשים מהגיליון שלא קיימים מקומית
-                freshDaysData[day].forEach(worker => {
-                    if (!allDaysData[day].includes(worker)) {
-                        allDaysData[day].push(worker);
+        // שלב 2: הגדרת הרשימה העדכנית כבסיס.
+        allDaysData = freshDaysData;
+
+        // שלב 3: מיזוג חכם - הוספת עובדים שהוספו ידנית בעבר.
+        // עובד שהוסף ידנית הוא עובד שקיים ברשימה השמורה (savedAllDaysData)
+        // אבל לא קיים ברשימה החדשה שהגיעה מה-Sheets (freshDaysData).
+        Object.keys(savedAllDaysData).forEach(day => {
+            if (allDaysData[day]) { // מוודא שהיום עדיין קיים
+                savedAllDaysData[day].forEach(savedWorker => {
+                    const isFromSheet = freshDaysData[day]?.includes(savedWorker);
+                    const isAlreadyAdded = allDaysData[day].includes(savedWorker);
+                    
+                    if (!isFromSheet && !isAlreadyAdded) {
+                        allDaysData[day].push(savedWorker);
                     }
                 });
+            } else if (savedAllDaysData[day].length > 0) {
+                 // אם היום נמחק מהשיטס אבל יש לו עובדים שמורים, נוסיף אותו
+                 allDaysData[day] = savedAllDaysData[day];
             }
         });
 
-        renderTable(headers);
+        const finalHeaders = Object.keys(allDaysData).sort((a, b) => headers.indexOf(a) - headers.indexOf(b));
+        renderTable(finalHeaders);
         showSuccess();
         
-        // שמירה וStartup של auto-save
         storage.saveData(assignments, allDaysData);
         storage.startAutoSave(assignments, allDaysData);
         
     } catch (error) {
-        // אם יש נתונים שמורים, השתמש בהם
-        if (savedData && Object.keys(savedData.allDaysData || {}).length > 0) {
+        // במקרה של שגיאה בטעינה מה-Sheets, נשתמש בנתונים השמורים כגיבוי.
+        if (Object.keys(savedAllDaysData).length > 0) {
+            allDaysData = savedAllDaysData;
             const headers = Object.keys(allDaysData);
             renderTable(headers);
             showSuccess();
@@ -588,9 +569,7 @@ const openModal = (day) => {
 
 const closeModal = () => {
     document.getElementById("assignmentModal").style.display = "none";
-    // שמירה אוטומטית כשסוגרים מודל
     storage.saveData(assignments, allDaysData);
-    // עדכון האינדיקטורים
     renderTable(Object.keys(allDaysData));
 };
 
@@ -610,9 +589,12 @@ const updateWorkerLists = (day) => {
     const allAvailableForDay = allDaysData[day] || [];
     
     const assignedNames = [
-        ...assignedForDay.runners.map(w => w.name), ...assignedForDay.waiters.hall.map(w => w.name),
-        ...assignedForDay.waiters.terrace.map(w => w.name), ...assignedForDay.hostess.hall.map(w => w.name),
-        ...assignedForDay.hostess.terrace.map(w => w.name), ...assignedForDay.tastings.map(w => w.name)
+        ...(assignedForDay.runners || []).map(w => w.name),
+        ...(assignedForDay.waiters?.hall || []).map(w => w.name),
+        ...(assignedForDay.waiters?.terrace || []).map(w => w.name),
+        ...(assignedForDay.hostess?.hall || []).map(w => w.name),
+        ...(assignedForDay.hostess?.terrace || []).map(w => w.name),
+        ...(assignedForDay.tastings || []).map(w => w.name)
     ];
 
     const availableWorkers = allAvailableForDay.filter(name => name && !assignedNames.includes(name));
@@ -640,57 +622,47 @@ const updateWorkerLists = (day) => {
         return item;
     };
     
-    assignedForDay.runners.forEach(worker => lists.runners.appendChild(createAssignedItem(worker, 'runners')));
-    assignedForDay.waiters.hall.forEach(worker => lists.waitersHall.appendChild(createAssignedItem(worker, 'waiters', 'hall')));
-    assignedForDay.waiters.terrace.forEach(worker => lists.waitersTerrace.appendChild(createAssignedItem(worker, 'waiters', 'terrace')));
-    assignedForDay.hostess.hall.forEach(worker => lists.hostessHall.appendChild(createAssignedItem(worker, 'hostess', 'hall')));
-    assignedForDay.hostess.terrace.forEach(worker => lists.hostessTerrace.appendChild(createAssignedItem(worker, 'hostess', 'terrace')));
-    assignedForDay.tastings.forEach(worker => lists.tastings.appendChild(createAssignedItem(worker, 'tastings')));
+    (assignedForDay.runners || []).forEach(worker => lists.runners.appendChild(createAssignedItem(worker, 'runners')));
+    (assignedForDay.waiters?.hall || []).forEach(worker => lists.waitersHall.appendChild(createAssignedItem(worker, 'waiters', 'hall')));
+    (assignedForDay.waiters?.terrace || []).forEach(worker => lists.waitersTerrace.appendChild(createAssignedItem(worker, 'waiters', 'terrace')));
+    (assignedForDay.hostess?.hall || []).forEach(worker => lists.hostessHall.appendChild(createAssignedItem(worker, 'hostess', 'hall')));
+    (assignedForDay.hostess?.terrace || []).forEach(worker => lists.hostessTerrace.appendChild(createAssignedItem(worker, 'hostess', 'terrace')));
+    (assignedForDay.tastings || []).forEach(worker => lists.tastings.appendChild(createAssignedItem(worker, 'tastings')));
 
-    // עדכון כותרות עם מספר עובדים
     document.getElementById('availableWorkersTitle').textContent = `עובדים זמינים (${availableWorkers.length})`;
-    document.getElementById('runnersTitle').textContent = `ראנרים (${assignedForDay.runners.length})`;
-    document.getElementById('waitersHallTitle').textContent = `אולם (${assignedForDay.waiters.hall.length})`;
-    document.getElementById('waitersTerraceTitle').textContent = `טרסה (${assignedForDay.waiters.terrace.length})`;
-    document.getElementById('hostessHallTitle').textContent = `אולם (${assignedForDay.hostess.hall.length})`;
-    document.getElementById('hostessTerraceTitle').textContent = `טרסה (${assignedForDay.hostess.terrace.length})`;
-    document.getElementById('tastingsTitle').textContent = `טעימות (${assignedForDay.tastings.length})`;
+    document.getElementById('runnersTitle').textContent = `ראנרים (${(assignedForDay.runners || []).length})`;
+    document.getElementById('waitersHallTitle').textContent = `אולם (${(assignedForDay.waiters?.hall || []).length})`;
+    document.getElementById('waitersTerraceTitle').textContent = `טרסה (${(assignedForDay.waiters?.terrace || []).length})`;
+    document.getElementById('hostessHallTitle').textContent = `אולם (${(assignedForDay.hostess?.hall || []).length})`;
+    document.getElementById('hostessTerraceTitle').textContent = `טרסה (${(assignedForDay.hostess?.terrace || []).length})`;
+    document.getElementById('tastingsTitle').textContent = `טעימות (${(assignedForDay.tastings || []).length})`;
 };
 
 const assignWorker = (workerName, role, subRole = null) => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
-    const assignedForDay = assignments[day];
-    
     const workerData = { name: workerName };
 
     if (subRole) {
-        if (assignedForDay[role]?.[subRole] && !assignedForDay[role][subRole].some(w => w.name === workerName)) {
-            assignedForDay[role][subRole].push(workerData);
+        if (!assignments[day][role][subRole].some(w => w.name === workerName)) {
+            assignments[day][role][subRole].push(workerData);
         }
     } else {
-        if (Array.isArray(assignedForDay[role]) && !assignedForDay[role].some(w => w.name === workerName)) {
-            assignedForDay[role].push(workerData);
+        if (!assignments[day][role].some(w => w.name === workerName)) {
+            assignments[day][role].push(workerData);
         }
     }
     updateWorkerLists(day);
-    // שמירה מיידית
     storage.saveData(assignments, allDaysData);
 };
 
 const unassignWorker = (workerName, role, subRole = null) => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
-    const assignedForDay = assignments[day];
     if (subRole) {
-        if (assignedForDay[role]?.[subRole]) {
-            assignedForDay[role][subRole] = assignedForDay[role][subRole].filter(worker => worker.name !== workerName);
-        }
+        assignments[day][role][subRole] = assignments[day][role][subRole].filter(w => w.name !== workerName);
     } else {
-        if (Array.isArray(assignedForDay[role])) {
-            assignedForDay[role] = assignedForDay[role].filter(worker => worker.name !== workerName);
-        }
+        assignments[day][role] = assignments[day][role].filter(w => w.name !== workerName);
     }
     updateWorkerLists(day);
-    // שמירה מיידית
     storage.saveData(assignments, allDaysData);
 };
 
@@ -698,7 +670,6 @@ const saveArrivalTime = () => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
     if (assignments[day]) {
         assignments[day].arrivalTime = document.getElementById('arrivalTimeInput').value.trim();
-        // שמירה מיידית
         storage.saveData(assignments, allDaysData);
     }
 };
@@ -708,14 +679,16 @@ const addAvailableWorker = () => {
     if (!workerName || workerName.trim() === '') return;
     const trimmedName = workerName.trim();
     const day = document.getElementById("assignmentModal").dataset.currentDay;
-    if (allDaysData[day] && allDaysData[day].includes(trimmedName)) {
+    
+    if (!allDaysData[day]) allDaysData[day] = [];
+
+    if (allDaysData[day].includes(trimmedName)) {
         alert(`העובד "${trimmedName}" כבר קיים ברשימת הזמינים ליום זה.`);
         return;
     }
-    if (!allDaysData[day]) allDaysData[day] = [];
+    
     allDaysData[day].push(trimmedName);
     updateWorkerLists(day);
-    // שמירה מיידית
     storage.saveData(assignments, allDaysData);
 };
 
@@ -726,8 +699,7 @@ const filterAvailableWorkers = () => {
     const li = ul.getElementsByClassName('user-item');
     for (let i = 0; i < li.length; i++) {
         const span = li[i].getElementsByClassName('user-name')[0];
-        const txtValue = span.textContent || span.innerText;
-        li[i].style.display = (txtValue.toLowerCase().indexOf(filter) > -1) ? "flex" : "none";
+        li[i].style.display = (span.textContent.toLowerCase().indexOf(filter) > -1) ? "flex" : "none";
     }
 };
 
@@ -736,26 +708,18 @@ const filterAvailableWorkers = () => {
 // ============================================================================
 
 const showSummary = () => {
-    // שמירה לפני מעבר לסיכום
     storage.saveData(assignments, allDaysData);
     sessionStorage.setItem('workSchedule', JSON.stringify(assignments));
     window.location.href = 'index.html';
 };
 
 const resetAllAssignments = () => {
-    const confirmMessage = "האם אתה בטוח שברצונך לאפס את כל השיבוצים?\nפעולה זו תמחק את כל הנתונים השמורים ולא ניתן לבטלה.";
-    if (confirm(confirmMessage)) {
-        // איפוס המשתנים
+    if (confirm("האם אתה בטוח שברצונך לאפס את כל השיבוצים?")) {
         assignments = {};
-        
-        // מחיקת הנתונים השמורים
-        storage.clearAllData();
-        
-        // עדכון הממשק
+        // לא מאפסים את allDaysData כדי לשמור על העובדים הידניים
+        storage.saveData(assignments, allDaysData); // שמירת השיבוצים הריקים
         renderTable(Object.keys(allDaysData));
-        
-        // הודעה למשתמש
-        alert("כל השיבוצים נמחקו בהצלחה. תוכל להתחיל מחדש.");
+        alert("כל השיבוצים נמחקו.");
     }
 };
 
@@ -767,24 +731,16 @@ const importData = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const confirmMessage = "ייבוא הקובץ יחליף את כל הנתונים הנוכחיים. האם להמשיך?";
-    if (!confirm(confirmMessage)) {
-        event.target.value = ''; // איפוס בחירת הקובץ
+    if (!confirm("ייבוא הקובץ יחליף את כל הנתונים הנוכחיים. האם להמשיך?")) {
+        event.target.value = '';
         return;
     }
 
     storage.importFromFile(file, (importedData) => {
-        // עדכון הנתונים
         assignments = importedData.assignments || {};
         allDaysData = importedData.allDaysData || {};
-        
-        // שמירה מיידית
         storage.saveData(assignments, allDaysData);
-        
-        // עדכון הממשק
         renderTable(Object.keys(allDaysData));
-        
-        // איפוס בחירת הקובץ
         event.target.value = '';
     });
 };
@@ -799,13 +755,11 @@ window.onclick = (event) => {
     }
 };
 
-// שמירה כשסוגרים את הדף
 window.addEventListener('beforeunload', () => {
     storage.saveData(assignments, allDaysData);
     storage.stopAutoSave();
 });
 
-// שמירה כשהדף מאבד פוקוס
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         storage.saveData(assignments, allDaysData);
