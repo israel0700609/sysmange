@@ -713,29 +713,27 @@ const initializeApp = async () => {
   try {
     const { headers, freshDaysData } = await tryFetchData();
 
-    // שמירה זמנית של עובדים שהוזנו ידנית ואינם קיימים בגיליון
-    const manuallyAddedWorkers = {};
-    Object.keys(allDaysData).forEach(day => {
-      if (freshDaysData[day]) {
-        manuallyAddedWorkers[day] = allDaysData[day].filter(worker => !freshDaysData[day].includes(worker));
-      } else {
-        manuallyAddedWorkers[day] = allDaysData[day];
-      }
-    });
+    // שימו לב, הפתרון הזה עובד אם העמוד נטען מחדש או שמקליקים על כפתור האיפוס
+    // הוא מוודא שרשימת allDaysData תמיד מכילה את העובדים מהגיליון
+    // ובנוסף מוסיף אליהם את העובדים שהוספו ידנית ושנמצאים בזיכרון המקומי
+    // כל עובד שהוסר לא יופיע יותר ברשימה הזמינה
 
-    // עדכון רשימת העובדים הזמינים לכל יום על בסיס הגיליון בלבד
-    allDaysData = {};
     Object.keys(freshDaysData).forEach(day => {
-      allDaysData[day] = freshDaysData[day];
-      // הוספה חזרה של עובדים שהוזנו ידנית
-      if (manuallyAddedWorkers[day] && manuallyAddedWorkers[day].length > 0) {
-        allDaysData[day] = [...new Set([...allDaysData[day], ...manuallyAddedWorkers[day]])];
-      }
+      // רשימת עובדים חדשה ליום הנוכחי שמבוססת על הגיליון
+      const currentDayWorkers = freshDaysData[day];
+      
+      // קבל את העובדים שהוספו ידנית ליום זה מתוך הנתונים השמורים
+      const savedManualWorkers = (savedData?.allDaysData?.[day] || []).filter(worker => !currentDayWorkers.includes(worker));
+      
+      // עדכן את allDaysData כדי לשלב את שתי הרשימות
+      allDaysData[day] = [...new Set([...currentDayWorkers, ...savedManualWorkers])];
     });
+    
+    // שמור את הנתונים המעודכנים ב-localStorage
+    storage.saveData(assignments, allDaysData);
 
     renderTable(headers);
     showSuccess();
-    storage.saveData(assignments, allDaysData);
     storage.startAutoSave(assignments, allDaysData);
   } catch (error) {
     if (Object.keys(allDaysData).length > 0) {
@@ -936,22 +934,14 @@ const resetAllAssignments = async () => {
     // טעינת נתונים מחדש מ-Google Sheets
     try {
       const { headers, freshDaysData } = await tryFetchData();
-      Object.keys(freshDaysData).forEach(day => {
-        if (!allDaysData[day]) {
-          allDaysData[day] = freshDaysData[day];
-        } else {
-          // הוספת עובדים חדשים לימים קיימים
-          freshDaysData[day].forEach(worker => {
-            if (!allDaysData[day].includes(worker)) {
-              allDaysData[day].push(worker);
-            }
-          });
-        }
-      });
+      // נמחק את הנתונים הישנים ונשתמש רק בנתונים ה"טריים" מהגיליון
+      allDaysData = freshDaysData;
       renderTable(headers);
+      storage.saveData(assignments, allDaysData); // שמירה של המצב החדש
       alert("כל השיבוצים נמחקו ונתוני הגיליון נטענו מחדש.");
     } catch (error) {
-      alert("שגיאה בטעינת הנתונים מ-Google Sheets: " + error.message);
+      alert("שגיאה בטעינת הנתונים מ-Google Sheets. הנתונים לא נטענו מחדש, אך השיבוצים הקיימים נמחקו.");
+      renderTable(Object.keys(allDaysData)); // נציג את הטבלה הריקה
     }
   }
 };
