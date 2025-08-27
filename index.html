@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 
-<!-- נוספו ספריות לייצוא PDF -->
+<!-- ספריות לייצוא PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -101,7 +101,6 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // קוד ה-JavaScript הקיים להצגת הסידור נשאר ללא שינוי
     const scheduleDataString = sessionStorage.getItem('workSchedule');
     if (!scheduleDataString) {
         document.getElementById('no-data-message').style.display = 'block';
@@ -166,49 +165,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// =========================================================================
-// ==================== קוד ייצוא PDF סופי עם שיטת ה-CLONE ====================
-// =========================================================================
+// ==================== קוד ייצוא PDF מתוקן ====================
 document.getElementById('export-pdf-btn').addEventListener('click', async () => {
     const exportButton = document.getElementById('export-pdf-btn');
     const originalButtonText = exportButton.textContent;
     const elementToCapture = document.getElementById('capture');
-    let cloneForExport = null; // נגדיר את המשתנה כאן כדי שיהיה זמין ב-finally
+    let cloneForExport = null;
 
     try {
         exportButton.textContent = 'מכין לייצוא...';
         exportButton.disabled = true;
 
-        // שלב 1: שכפול האלמנט המקורי
+        // שכפול האלמנט
         cloneForExport = elementToCapture.cloneNode(true);
-
-        // שלב 2: עיצוב השיבוט כך שיהיה מחוץ למסך וברוחב המקורי
-        // זה מאלץ את הדפדפן לחשב את הגובה המלא שלו ללא מגבלות של החלון
         cloneForExport.style.position = 'absolute';
         cloneForExport.style.top = '-9999px';
         cloneForExport.style.left = '0px';
-        cloneForExport.style.width = elementToCapture.offsetWidth + 'px'; // קביעת רוחב זהה למקורי
-
-        // שלב 3: הוספת השיבוט ל-DOM כדי שהדפדפן יחשב את מידותיו
+        cloneForExport.style.width = elementToCapture.scrollWidth + 'px';
+        cloneForExport.style.height = elementToCapture.scrollHeight + 'px';
         document.body.appendChild(cloneForExport);
 
-        // המתנה קצרה מאוד כדי להבטיח שהדפדפן סיים את חישוב הפריסה של השיבוט
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // שלב 4: הפעלת html2canvas על השיבוט המוכן, ולא על האלמנט המקורי
         exportButton.textContent = 'מייצא, נא להמתין...';
         const canvas = await html2canvas(cloneForExport, {
             scale: 2,
             useCORS: true,
             allowTaint: true,
-            // אנו אומרים לספרייה במפורש מה הגודל המלא של התוכן
-            height: cloneForExport.scrollHeight,
             width: cloneForExport.scrollWidth,
-            windowHeight: cloneForExport.scrollHeight,
-            windowWidth: cloneForExport.scrollWidth
+            height: cloneForExport.scrollHeight,
+            windowWidth: cloneForExport.scrollWidth,
+            windowHeight: cloneForExport.scrollHeight
         });
 
-        // מכאן והלאה, הקוד מחלק את התמונה לעמודים בגודל A4
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         
@@ -248,7 +237,6 @@ document.getElementById('export-pdf-btn').addEventListener('click', async () => 
         console.error("An error occurred during PDF export:", error);
         alert("אירעה שגיאה במהלך ייצוא ה-PDF.");
     } finally {
-        // שלב 5: ניקוי - הסרת השיבוט מה-DOM בין אם הייצוא הצליח או נכשל
         if (cloneForExport) {
             document.body.removeChild(cloneForExport);
         }
