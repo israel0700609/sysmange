@@ -2,7 +2,7 @@
 <html lang="he">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>מערכת שיבוץ עובדים</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -344,7 +344,6 @@ const initializeApp = async () => {
         const { headers, data: sheetData } = parseCsvData(csvText);
         allDaysData = sheetData;
 
-        // הוסף עובדים ידניים שנשמרו לאלו שהגיעו מהגיליון
         Object.keys(savedAllDaysData).forEach(day => {
             if (!allDaysData[day]) allDaysData[day] = [];
             savedAllDaysData[day].forEach(savedWorker => {
@@ -446,6 +445,7 @@ const assignWorker = (workerName, role, subRole = null) => {
         if (!assignments[day][role].some(w => w.name === workerName)) assignments[day][role].push(workerData);
     }
     updateWorkerLists(day);
+    storage.saveData({ assignments, allDaysData }); // <-- תיקון: שמירה מיידית
 };
 
 const unassignWorker = (workerName, role, subRole = null) => {
@@ -456,12 +456,14 @@ const unassignWorker = (workerName, role, subRole = null) => {
         assignments[day][role] = assignments[day][role].filter(w => w.name !== workerName);
     }
     updateWorkerLists(day);
+    storage.saveData({ assignments, allDaysData }); // <-- תיקון: שמירה מיידית
 };
 
 const saveArrivalTime = () => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
     if (assignments[day]) {
         assignments[day].arrivalTime = document.getElementById('arrivalTimeInput').value.trim();
+        storage.saveData({ assignments, allDaysData }); // <-- תיקון: שמירה מיידית
     }
 };
 
@@ -477,6 +479,7 @@ const addAvailableWorker = () => {
     }
     allDaysData[day].push(trimmedName);
     updateWorkerLists(day);
+    storage.saveData({ assignments, allDaysData }); // <-- תיקון: שמירה מיידית
 };
 
 const filterAvailableWorkers = () => {
