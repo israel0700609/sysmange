@@ -1,441 +1,630 @@
 <!DOCTYPE html>
 <html lang="he">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מערכת שיבוץ עובדים</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
-
-    <style>
-        :root {
-            --primary-color: #007bff; --primary-dark-color: #0056b3;
-            --success-color: #28a745; --danger-color: #dc3545; --warning-color: #ffc107;
-            --light-gray: #f8f9fa; --dark-gray: #6c757d; --text-color: #212529;
-            --border-color: #dee2e6; --shadow-sm: 0 .125rem .25rem rgba(0,0,0,.075);
-            --shadow-md: 0 .5rem 1rem rgba(0,0,0,.15); --border-radius: 0.5rem;
-        }
-        body {
-            font-family: 'Rubik', 'Segoe UI', Arial, sans-serif; direction: rtl;
-            padding: 20px; background-color: var(--light-gray); color: var(--text-color);
-            background-image: url('64897391_2214140521987177_3125450978359246848_n.jpg');
-            background-repeat: no-repeat;
-            background-position: center top;
-            background-size: 100% auto;
-        }
-        .container {
-            max-width: 1000px; margin: 0 auto; background-color: #fff;
-            padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-md);
-        }
-        h2 { text-align: center; color: var(--text-color); margin-bottom: 25px; font-size: 2.2rem; }
-        
-        /* סטטוס השמירה */
-        .save-status {
-            background-color: #d1ecf1; color: #0c5460; padding: 10px 15px;
-            border-radius: var(--border-radius); margin-bottom: 20px; text-align: center;
-            border: 1px solid #bee5eb; font-weight: 500;
-        }
-        .save-status.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
-        .save-status.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
-        
-        #daysTable {
-            width: 100%; border-collapse: separate;
-            border-spacing: 0 8px; margin-bottom: 20px;
-        }
-        #daysTable th {
-            border: 1px solid var(--border-color); padding: 18px 15px; text-align: center;
-            background-color: #fff; color: var(--primary-color); cursor: pointer;
-            font-size: 1.2rem; font-weight: 500; transition: all 0.2s ease-in-out;
-            border-radius: var(--border-radius); position: relative;
-        }
-        #daysTable th:hover {
-            background-color: var(--primary-color); color: #fff;
-            transform: translateY(-2px); box-shadow: var(--shadow-sm);
-        }
-        
-        /* אינדיקטור שיבוצים */
-        .assignment-indicator {
-            position: absolute; top: 5px; right: 5px; background-color: var(--success-color);
-            color: white; border-radius: 50%; width: 20px; height: 20px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.8rem; font-weight: bold;
-        }
-        
-        #summaryButtonContainer { 
-            text-align: center; margin-top: 30px; display: flex; 
-            justify-content: center; gap: 15px; flex-wrap: wrap;
-        }
-        
-        .action-button {
-            padding: 12px 25px; font-size: 1.2rem; font-weight: 500; color: #fff;
-            border: none; border-radius: var(--border-radius); cursor: pointer; 
-            transition: all 0.2s ease; text-decoration: none; display: inline-block;
-        }
-        
-        #summaryButton { background-color: var(--success-color); }
-        #resetButton { background-color: var(--danger-color); }
-        #exportButton { background-color: var(--warning-color); color: var(--text-color); }
-        #importButton { background-color: var(--dark-gray); }
-        
-        .action-button:hover { 
-            filter: brightness(110%); box-shadow: var(--shadow-sm); 
-            transform: translateY(-1px);
-        }
-        
-        .file-input-wrapper {
-            position: relative; overflow: hidden; display: inline-block;
-        }
-        
-        #importFile {
-            position: absolute; left: -9999px;
-        }
-        
-        .modal {
-            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
-            width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px); justify-content: center; align-items: center; padding: 20px;
-        }
-        .modal-content {
-            background-color: #fefefe; padding: 30px; border-radius: var(--border-radius);
-            box-shadow: var(--shadow-md); width: 95%; max-width: 900px;
-            direction: rtl; display: flex; flex-direction: column; max-height: 90vh;
-        }
-        .modal-header {
-            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; flex-shrink: 0;
-        }
-        .modal-header h3 {
-            margin: 0; font-size: 1.8rem; width: 100%; margin-bottom: 15px;
-        }
-        .arrival-time-wrapper {
-            display: flex; align-items: center; gap: 10px; width: 100%;
-        }
-        .arrival-time-wrapper label { font-size: 1.1rem; font-weight: 500; }
-        #arrivalTimeInput {
-            padding: 8px 12px; font-size: 1.1rem; border: 1px solid var(--border-color);
-            border-radius: 6px; width: 120px; text-align: center;
-        }
-        .modal-body { display: flex; gap: 30px; overflow-y: hidden; }
-        .modal-column {
-            flex: 1; background-color: var(--light-gray); display: flex;
-            flex-direction: column; min-width: 280px; border-radius: var(--border-radius);
-            border: 1px solid var(--border-color);
-        }
-        .column-title {
-            font-weight: 700; text-align: center; margin: 0; color: var(--text-color);
-            padding: 15px; border-bottom: 1px solid var(--border-color); background-color: #fff;
-            flex-shrink: 0; font-size: 1.3rem; border-radius: var(--border-radius) var(--border-radius) 0 0;
-        }
-        .search-wrapper { padding: 15px; border-bottom: 1px solid var(--border-color); background-color: #fff; }
-        #workerSearchInput {
-            width: 100%; padding: 10px; font-size: 1rem; border: 1px solid var(--border-color);
-            border-radius: 6px; box-sizing: border-box; margin-bottom: 10px;
-        }
-        .add-worker-button {
-            width: 100%; padding: 10px; font-size: 1rem; font-weight: 500; color: #fff;
-            background-color: var(--primary-color); border: none; border-radius: 6px;
-            cursor: pointer; transition: all 0.2s ease;
-        }
-        .add-worker-button:hover { background-color: var(--primary-dark-color); box-shadow: var(--shadow-sm); }
-        .list-container { overflow-y: auto; padding: 15px; }
-        .assigned-role-group { margin-bottom: 20px; }
-        .main-role-title {
-            font-weight: 700; font-size: 1.2em; margin-bottom: 12px;
-            padding-bottom: 8px; border-bottom: 2px solid var(--border-color);
-        }
-        .sub-role-title {
-            font-size: 1.05em; color: var(--dark-gray); font-weight: 500;
-            margin-top: 10px; margin-bottom: 5px; padding-right: 10px;
-        }
-        .user-item, .assigned-list li {
-            padding: 12px; margin-bottom: 8px; background-color: #fff;
-            border: 1px solid var(--border-color); border-radius: 6px;
-            transition: all 0.2s ease; font-size: 1.1rem;
-        }
-        .user-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; }
-        .assigned-list li { cursor: pointer; }
-        .assigned-list li:hover {
-            background-color: #ffebee; border-color: #ef9a9a;
-            text-decoration: line-through; color: #c62828;
-        }
-        .user-name { font-weight: 500; margin-bottom: 10px; width: 100%; }
-        .assign-buttons { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
-        .assign-buttons button {
-            padding: 8px 10px; border: none; border-radius: 6px; cursor: pointer;
-            font-size: 14px; flex-grow: 1; font-weight: 500;
-            transition: filter 0.2s ease, transform 0.2s ease;
-        }
-        .assign-buttons button:hover { filter: brightness(110%); transform: translateY(-1px); }
-        .assign-buttons .runner { background-color: #28a745; color: white; }
-        .assign-buttons .waiter-hall { background-color: #38516d; color: white; }
-        .assign-buttons .waiter-terrace { background-color: #022346; color: white; }
-        .assign-buttons .hostess-hall { background-color: #96009b; color: var(--text-color); }
-        .assign-buttons .hostess-terrace { background-color: #ff7fc7; color: var(--text-color); }
-        .assign-buttons .tastings { background-color: #17a2b8; color: white; }
-        .close-button {
-            color: #aaa; font-size: 40px; font-weight: bold; cursor: pointer;
-            transition: color 0.2s ease; margin-left: auto;
-        }
-        .close-button:hover { color: #333; }
-        .error-message, .loading-message {
-            padding: 15px; border-radius: var(--border-radius); margin-bottom: 20px;
-            text-align: center; font-size: 1.1rem;
-        }
-        .error-message { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .loading-message { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-
-        @media (max-width: 768px) {
-            body { padding: 10px; font-size: 16px; }
-            .container { padding: 15px; }
-            .modal-body { flex-direction: column; overflow-y: auto; }
-            .modal-content { padding: 15px; }
-            .modal-header h3 { font-size: 1.5rem; }
-            #summaryButtonContainer { flex-direction: column; align-items: center; }
-            .action-button { width: 80%; max-width: 300px; }
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>מערכת שיבוץ עובדים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --primary-color: #007bff;
+  --primary-dark-color: #0056b3;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+  --light-gray: #f8f9fa;
+  --dark-gray: #6c757d;
+  --text-color: #212529;
+  --border-color: #dee2e6;
+  --shadow-sm: 0 .125rem .25rem rgba(0,0,0,.075);
+  --shadow-md: 0 .5rem 1rem rgba(0,0,0,.15);
+  --border-radius: 0.5rem;
+}
+body {
+  font-family: 'Rubik', 'Segoe UI', Arial, sans-serif;
+  direction: rtl;
+  padding: 20px;
+  background-color: var(--light-gray);
+  color: var(--text-color);
+  background-image: url('64897391_2214140521987177_3125450978359246848_n.jpg');
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: 100% auto;
+}
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  background-color: #fff;
+  padding: 30px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+}
+h2 {
+  text-align: center;
+  color: var(--text-color);
+  margin-bottom: 25px;
+  font-size: 2.2rem;
+}
+/* סטטוס שמירה */
+.save-status {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  padding: 10px 15px;
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+  text-align: center;
+  border: 1px solid #bee5eb;
+  font-weight: 500;
+}
+.save-status.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
+}
+.save-status.success {
+  background-color: #d4edda;
+  color: #155724;
+  border-color: #c3e6cb;
+}
+#daysTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+  margin-bottom: 20px;
+}
+#daysTable th {
+  border: 1px solid var(--border-color);
+  padding: 18px 15px;
+  text-align: center;
+  background-color: #fff;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  border-radius: var(--border-radius);
+  position: relative;
+}
+#daysTable th:hover {
+  background-color: var(--primary-color);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+/* אינדיקטור שיבוצים */
+.assignment-indicator {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: var(--success-color);
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+#summaryButtonContainer {
+  text-align: center;
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+.action-button {
+  padding: 12px 25px;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #fff;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+#summaryButton {
+  background-color: var(--success-color);
+}
+#resetButton {
+  background-color: var(--danger-color);
+}
+#exportButton {
+  background-color: var(--warning-color);
+  color: var(--text-color);
+}
+#importButton {
+  background-color: var(--dark-gray);
+}
+.action-button:hover {
+  filter: brightness(110%);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.file-input-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+#importFile {
+  position: absolute;
+  left: -9999px;
+}
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+.modal-content {
+  background-color: #fefefe;
+  padding: 30px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+  width: 95%;
+  max-width: 900px;
+  direction: rtl;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+.modal-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.8rem;
+  width: 100%;
+  margin-bottom: 15px;
+}
+.arrival-time-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.arrival-time-wrapper label {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+#arrivalTimeInput {
+  padding: 8px 12px;
+  font-size: 1.1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  width: 120px;
+  text-align: center;
+}
+.modal-body {
+  display: flex;
+  gap: 30px;
+  overflow-y: hidden;
+}
+.modal-column {
+  flex: 1;
+  background-color: var(--light-gray);
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+}
+.column-title {
+  font-weight: 700;
+  text-align: center;
+  margin: 0;
+  color: var(--text-color);
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #fff;
+  flex-shrink: 0;
+  font-size: 1.3rem;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+.search-wrapper {
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #fff;
+}
+#workerSearchInput {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+.add-worker-button {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #fff;
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.add-worker-button:hover {
+  background-color: var(--primary-dark-color);
+  box-shadow: var(--shadow-sm);
+}
+.list-container {
+  overflow-y: auto;
+  padding: 15px;
+}
+.assigned-role-group {
+  margin-bottom: 20px;
+}
+.main-role-title {
+  font-weight: 700;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border-color);
+}
+.sub-role-title {
+  font-size: 1.05em;
+  color: var(--dark-gray);
+  font-weight: 500;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  padding-right: 10px;
+}
+.user-item, .assigned-list li {
+  padding: 12px;
+  margin-bottom: 8px;
+  background-color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 1.1rem;
+}
+.user-item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+.assigned-list li {
+  cursor: pointer;
+}
+.assigned-list li:hover {
+  background-color: #ffebee;
+  border-color: #ef9a9a;
+  text-decoration: line-through;
+  color: #c62828;
+}
+.user-name {
+  font-weight: 500;
+  margin-bottom: 10px;
+  width: 100%;
+}
+.assign-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.assign-buttons button {
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  flex-grow: 1;
+  font-weight: 500;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+.assign-buttons button:hover {
+  filter: brightness(110%);
+  transform: translateY(-1px);
+}
+.assign-buttons .runner {
+  background-color: #28a745;
+  color: white;
+}
+.assign-buttons .waiter-hall {
+  background-color: #38516d;
+  color: white;
+}
+.assign-buttons .waiter-terrace {
+  background-color: #022346;
+  color: white;
+}
+.assign-buttons .hostess-hall {
+  background-color: #96009b;
+  color: var(--text-color);
+}
+.assign-buttons .hostess-terrace {
+  background-color: #ff7fc7;
+  color: var(--text-color);
+}
+.assign-buttons .tastings {
+  background-color: #17a2b8;
+  color: white;
+}
+.close-button {
+  color: #aaa;
+  font-size: 40px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  margin-left: auto;
+}
+.close-button:hover {
+  color: #333;
+}
+.error-message, .loading-message {
+  padding: 15px;
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 1.1rem;
+}
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+.loading-message {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+    font-size: 16px;
+  }
+  .container {
+    padding: 15px;
+  }
+  .modal-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .modal-content {
+    padding: 15px;
+  }
+  .modal-header h3 {
+    font-size: 1.5rem;
+  }
+  #summaryButtonContainer {
+    flex-direction: column;
+    align-items: center;
+  }
+  .action-button {
+    width: 80%;
+    max-width: 300px;
+  }
+}
+</style>
 </head>
 <body>
-
 <div class="container">
-    <h2>מערכת שיבוץ עובדים</h2>
-    <div id="saveStatus" class="save-status" style="display: none;"></div>
-    <div id="loadingMessage" class="loading-message">טוען נתונים...</div>
-    <div id="errorMessage" class="error-message" style="display: none;"></div>
-    <p style="text-align: center; font-size: 1.2rem; color: var(--dark-gray);">לחץ על היום הרצוי כדי להתחיל בשיבוץ.</p>
-    <table id="daysTable" style="display: none;">
-        <thead><tr id="tableHeaders"></tr></thead>
-    </table>
-    <div id="summaryButtonContainer">
-        <button id="summaryButton" class="action-button" onclick="showSummary()">צפייה בסיכום</button>
-        <button id="resetButton" class="action-button" onclick="resetAllAssignments()">התחלת סידור חדש</button>
-        <button id="exportButton" class="action-button" onclick="exportData()">ייצוא נתונים</button>
-        <div class="file-input-wrapper">
-            <button id="importButton" class="action-button" onclick="document.getElementById('importFile').click()">ייבוא נתונים</button>
-            <input type="file" id="importFile" accept=".json" onchange="importData(event)">
-        </div>
-    </div>
+<h2>מערכת שיבוץ עובדים</h2>
+<div id="saveStatus" class="save-status" style="display: none;"></div>
+<div id="loadingMessage" class="loading-message">טוען נתונים...</div>
+<div id="errorMessage" class="error-message" style="display: none;"></div>
+<p style="text-align: center; font-size: 1.2rem; color: var(--dark-gray);">לחץ על היום הרצוי כדי להתחיל בשיבוץ.</p>
+<table id="daysTable" style="display: none;">
+<thead><tr id="tableHeaders"></tr></thead>
+</table>
+<div id="summaryButtonContainer">
+<button id="summaryButton" class="action-button" onclick="showSummary()">צפייה בסיכום</button>
+<button id="resetButton" class="action-button" onclick="resetAllAssignments()">התחלת סידור חדש</button>
+<button id="exportButton" class="action-button" onclick="exportData()">ייצוא נתונים</button>
+<div class="file-input-wrapper">
+<button id="importButton" class="action-button" onclick="document.getElementById('importFile').click()">ייבוא נתונים</button>
+<input type="file" id="importFile" accept=".json" onchange="importData(event)" />
 </div>
-
+</div>
+</div>
 <div id="assignmentModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="modalTitle"></h3>
-            <span class="close-button" onclick="closeModal()">&times;</span>
-            <div class="arrival-time-wrapper">
-                <label for="arrivalTimeInput">שעת הגעה כללית:</label>
-                <input type="text" id="arrivalTimeInput" value="17:00" oninput="saveArrivalTime()">
-            </div>
-        </div>
-        <div class="modal-body">
-            <div class="modal-column">
-                <div class="column-title" id="availableWorkersTitle">עובדים זמינים</div>
-                <div class="search-wrapper">
-                    <input type="text" id="workerSearchInput" onkeyup="filterAvailableWorkers()" placeholder="חיפוש עובד...">
-                    <button class="add-worker-button" onclick="addAvailableWorker()">הוסף עובד זמין +</button>
-                </div>
-                <div class="list-container">
-                    <ul id="availableWorkersList" class="user-list"></ul>
-                </div>
-            </div>
-
-            <div class="modal-column">
-                <div class="column-title">עובדים משובצים</div>
-                <div class="list-container" id="assignedWorkersContainer">
-                    <div class="assigned-role-group"><div class="main-role-title" id="runnersTitle">ראנרים</div><ul id="runnersList" class="assigned-list"></ul></div>
-                    <div class="assigned-role-group">
-                        <div class="main-role-title">מלצרים</div>
-                        <div class="sub-role-title" id="waitersHallTitle">אולם</div><ul id="waitersHallList" class="assigned-list"></ul>
-                        <div class="sub-role-title" id="waitersTerraceTitle">טרסה</div><ul id="waitersTerraceList" class="assigned-list"></ul>
-                    </div>
-                    <div class="assigned-role-group">
-                        <div class="main-role-title">מארחת</div>
-                        <div class="sub-role-title" id="hostessHallTitle">אולם</div><ul id="hostessHallList" class="assigned-list"></ul>
-                        <div class="sub-role-title" id="hostessTerraceTitle">טרסה</div><ul id="hostessTerraceList" class="assigned-list"></ul>
-                    </div>
-                    <div class="assigned-role-group"><div class="main-role-title" id="tastingsTitle">טעימות</div><ul id="tastingsList" class="assigned-list"></ul></div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="modal-content">
+<div class="modal-header">
+<h3 id="modalTitle"></h3>
+<span class="close-button" onclick="closeModal()">&times;</span>
+<div class="arrival-time-wrapper">
+<label for="arrivalTimeInput">שעת הגעה כללית:</label>
+<input type="text" id="arrivalTimeInput" value="17:00" oninput="saveArrivalTime()" />
 </div>
-
+</div>
+<div class="modal-body">
+<div class="modal-column">
+<div class="column-title" id="availableWorkersTitle">עובדים זמינים</div>
+<div class="search-wrapper">
+<input type="text" id="workerSearchInput" onkeyup="filterAvailableWorkers()" placeholder="חיפוש עובד..." />
+<button class="add-worker-button" onclick="addAvailableWorker()">הוסף עובד זמין +</button>
+</div>
+<div class="list-container">
+<ul id="availableWorkersList" class="user-list"></ul>
+</div>
+</div>
+<div class="modal-column">
+<div class="column-title">עובדים משובצים</div>
+<div class="list-container" id="assignedWorkersContainer">
+<div class="assigned-role-group">
+<div class="main-role-title" id="runnersTitle">ראנרים</div>
+<ul id="runnersList" class="assigned-list"></ul>
+</div>
+<div class="assigned-role-group">
+<div class="main-role-title">מלצרים</div>
+<div class="sub-role-title" id="waitersHallTitle">אולם</div>
+<ul id="waitersHallList" class="assigned-list"></ul>
+<div class="sub-role-title" id="waitersTerraceTitle">טרסה</div>
+<ul id="waitersTerraceList" class="assigned-list"></ul>
+</div>
+<div class="assigned-role-group">
+<div class="main-role-title">מארחת</div>
+<div class="sub-role-title" id="hostessHallTitle">אולם</div>
+<ul id="hostessHallList" class="assigned-list"></ul>
+<div class="sub-role-title" id="hostessTerraceTitle">טרסה</div>
+<ul id="hostessTerraceList" class="assigned-list"></ul>
+</div>
+<div class="assigned-role-group">
+<div class="main-role-title" id="tastingsTitle">טעימות</div>
+<ul id="tastingsList" class="assigned-list"></ul>
+</div>
+</div>
+</div>
+</div>
+</div>
 <script>
-// ============================================================================
-// ==================== מערכת שמירה ושחזור משופרת ====================
-// ============================================================================
-
+// ========================== הגדרות ונתונים ==========================
 class WorkScheduleStorage {
-    constructor() {
-        this.STORAGE_KEY = 'workScheduleData';
-        this.BACKUP_KEY = 'workScheduleBackup';
-        this.AUTO_SAVE_INTERVAL = 5000; // 5 שניות
-        this.autoSaveTimer = null;
-        this.isAutoSaveEnabled = true;
+  constructor() {
+    this.STORAGE_KEY = 'workScheduleData';
+    this.BACKUP_KEY = 'workScheduleBackup';
+    this.AUTO_SAVE_INTERVAL = 5000; // 5 שניות
+    this.autoSaveTimer = null;
+    this.isAutoSaveEnabled = true;
+  }
+  saveData(assignments, allDaysData) {
+    try {
+      const dataToSave = {
+        assignments: assignments,
+        allDaysData: allDaysData,
+        timestamp: new Date().toISOString(),
+        version: "1.0"
+      };
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dataToSave));
+      localStorage.setItem(this.BACKUP_KEY, JSON.stringify(dataToSave));
+      this.updateSaveStatus('success', 'הנתונים נשמרו בהצלחה');
+      return true;
+    } catch (error) {
+      console.error('שגיאה בשמירת נתונים:', error);
+      this.updateSaveStatus('error', 'שגיאה בשמירת נתונים');
+      return false;
     }
-
-    // שמירת נתונים
-    saveData(assignments, allDaysData) {
-        try {
-            const dataToSave = {
-                assignments: assignments,
-                allDaysData: allDaysData,
-                timestamp: new Date().toISOString(),
-                version: "1.0"
-            };
-
-            // שמירה ראשית
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dataToSave));
-            
-            // שמירת גיבוי
-            localStorage.setItem(this.BACKUP_KEY, JSON.stringify(dataToSave));
-            
-            // עדכון סטטוס
-            this.updateSaveStatus('success', 'הנתונים נשמרו בהצלחה');
-            
-            return true;
-        } catch (error) {
-            console.error('שגיאה בשמירת נתונים:', error);
-            this.updateSaveStatus('error', 'שגיאה בשמירת נתונים');
-            return false;
+  }
+  loadData() {
+    try {
+      let data = localStorage.getItem(this.STORAGE_KEY);
+      if (!data) {
+        data = localStorage.getItem(this.BACKUP_KEY);
+        if (data) {
+          this.updateSaveStatus('warning', 'נטענו נתונים מגיבוי');
         }
+      }
+      if (data) {
+        const parsedData = JSON.parse(data);
+        this.updateSaveStatus('success', `נתונים נטענו (${new Date(parsedData.timestamp).toLocaleString('he-IL')})`);
+        return parsedData;
+      }
+      return null;
+    } catch (error) {
+      console.error('שגיאה בטעינת נתונים:', error);
+      this.updateSaveStatus('error', 'שגיאה בטעינת נתונים שמורים');
+      return null;
     }
-
-    // טעינת נתונים
-    loadData() {
-        try {
-            let data = localStorage.getItem(this.STORAGE_KEY);
-            
-            // אם הנתונים הראשיים לא קיימים, נסה גיבוי
-            if (!data) {
-                data = localStorage.getItem(this.BACKUP_KEY);
-                if (data) {
-                    this.updateSaveStatus('warning', 'נטענו נתונים מגיבוי');
-                }
-            }
-
-            if (data) {
-                const parsedData = JSON.parse(data);
-                this.updateSaveStatus('success', `נתונים נטענו (${new Date(parsedData.timestamp).toLocaleString('he-IL')})`);
-                return parsedData;
-            }
-            
-            return null;
-        } catch (error) {
-            console.error('שגיאה בטעינת נתונים:', error);
-            this.updateSaveStatus('error', 'שגיאה בטעינת נתונים שמורים');
-            return null;
+  }
+  exportToFile(assignments, allDaysData) {
+    try {
+      const dataToExport = {
+        assignments: assignments,
+        allDaysData: allDaysData,
+        exportDate: new Date().toISOString(),
+        version: "1.0"
+      };
+      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `work-schedule-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      this.updateSaveStatus('success', 'הנתונים יוצאו בהצלחה');
+      return true;
+    } catch (error) {
+      console.error('שגיאה בייצוא:', error);
+      this.updateSaveStatus('error', 'שגיאה בייצוא נתונים');
+      return false;
+    }
+  }
+  importFromFile(file, callback) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        if (importedData.assignments && importedData.allDaysData) {
+          callback(importedData);
+          this.updateSaveStatus('success', 'הנתונים יובאו בהצלחה');
+        } else {
+          throw new Error('פורמט קובץ לא תקין');
         }
+      } catch (error) {
+        console.error('שגיאה בייבוא:', error);
+        this.updateSaveStatus('error', 'שגיאה בייבוא הקובץ - פורמט לא תקין');
+      }
+    };
+    reader.readAsText(file);
+  }
+  clearAllData() {
+    try {
+      localStorage.removeItem(this.STORAGE_KEY);
+      localStorage.removeItem(this.BACKUP_KEY);
+      this.updateSaveStatus('success', 'כל הנתונים נמחקו');
+      return true;
+    } catch (error) {
+      console.error('שגיאה במחיקת נתונים:', error);
+      this.updateSaveStatus('error', 'שגיאה במחיקת נתונים');
+      return false;
     }
-
-    // ייצוא לקובץ
-    exportToFile(assignments, allDaysData) {
-        try {
-            const dataToExport = {
-                assignments: assignments,
-                allDaysData: allDaysData,
-                exportDate: new Date().toISOString(),
-                version: "1.0"
-            };
-
-            const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
-                type: 'application/json'
-            });
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `work-schedule-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            this.updateSaveStatus('success', 'הנתונים יוצאו בהצלחה');
-            return true;
-        } catch (error) {
-            console.error('שגיאה בייצוא:', error);
-            this.updateSaveStatus('error', 'שגיאה בייצוא נתונים');
-            return false;
-        }
+  }
+  startAutoSave(assignments, allDaysData) {
+    if (!this.isAutoSaveEnabled) return;
+    if (this.autoSaveTimer) {
+      clearInterval(this.autoSaveTimer);
     }
-
-    // ייבוא מקובץ
-    importFromFile(file, callback) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const importedData = JSON.parse(e.target.result);
-                
-                // בדיקת תקינות הנתונים
-                if (importedData.assignments && importedData.allDaysData) {
-                    callback(importedData);
-                    this.updateSaveStatus('success', 'הנתונים יובאו בהצלחה');
-                } else {
-                    throw new Error('פורמט קובץ לא תקין');
-                }
-            } catch (error) {
-                console.error('שגיאה בייבוא:', error);
-                this.updateSaveStatus('error', 'שגיאה בייבוא הקובץ - פורמט לא תקין');
-            }
-        };
-        reader.readAsText(file);
+    this.autoSaveTimer = setInterval(() => {
+      this.saveData(assignments, allDaysData);
+    }, this.AUTO_SAVE_INTERVAL);
+  }
+  stopAutoSave() {
+    if (this.autoSaveTimer) {
+      clearInterval(this.autoSaveTimer);
+      this.autoSaveTimer = null;
     }
-
-    // מחיקת כל הנתונים
-    clearAllData() {
-        try {
-            localStorage.removeItem(this.STORAGE_KEY);
-            localStorage.removeItem(this.BACKUP_KEY);
-            this.updateSaveStatus('success', 'כל הנתונים נמחקו');
-            return true;
-        } catch (error) {
-            console.error('שגיאה במחיקת נתונים:', error);
-            this.updateSaveStatus('error', 'שגיאה במחיקת נתונים');
-            return false;
-        }
-    }
-
-    // שמירה אוטומטית
-    startAutoSave(assignments, allDaysData) {
-        if (!this.isAutoSaveEnabled) return;
-
-        if (this.autoSaveTimer) {
-            clearInterval(this.autoSaveTimer);
-        }
-
-        this.autoSaveTimer = setInterval(() => {
-            this.saveData(assignments, allDaysData);
-        }, this.AUTO_SAVE_INTERVAL);
-    }
-
-    stopAutoSave() {
-        if (this.autoSaveTimer) {
-            clearInterval(this.autoSaveTimer);
-            this.autoSaveTimer = null;
-        }
-    }
-
-    // עדכון סטטוס השמירה
-    updateSaveStatus(type, message) {
-        const statusEl = document.getElementById('saveStatus');
-        statusEl.className = `save-status ${type}`;
-        statusEl.textContent = message;
-        statusEl.style.display = 'block';
-
-        // הסתרה אוטומטית אחרי 5 שניות
-        setTimeout(() => {
-            statusEl.style.display = 'none';
-        }, 5000);
-    }
+  }
+  updateSaveStatus(type, message) {
+    const statusEl = document.getElementById('saveStatus');
+    statusEl.className = `save-status ${type}`;
+    statusEl.textContent = message;
+    statusEl.style.display = 'block';
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+    }, 5000);
+  }
 }
 
-// ============================================================================
-// ==================== הקוד הראשי ====================
-// ============================================================================
-
+// ========================== קוד ראשי ==========================
 const SHEET_ID = "1_8vucMhNhGViLxDxUFe8XvrwRGBWtBxpieIfP8S24A4";
 const GID = "2089507675";
 const URLS = [`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`];
@@ -445,378 +634,365 @@ let assignments = {};
 let storage = new WorkScheduleStorage();
 
 const showError = (message) => {
-    document.getElementById("errorMessage").textContent = message;
-    document.getElementById("errorMessage").style.display = "block";
-    document.getElementById("loadingMessage").style.display = "none";
+  document.getElementById("errorMessage").textContent = message;
+  document.getElementById("errorMessage").style.display = "block";
+  document.getElementById("loadingMessage").style.display = "none";
 };
 
 const showSuccess = () => {
-    document.getElementById("errorMessage").style.display = "none";
-    document.getElementById("loadingMessage").style.display = "none";
-    document.getElementById("daysTable").style.display = "table";
+  document.getElementById("errorMessage").style.display = "none";
+  document.getElementById("loadingMessage").style.display = "none";
+  document.getElementById("daysTable").style.display = "table";
 };
 
 const tryFetchData = async () => {
-    try {
-        // הוספת פרמטר אקראי כדי למנוע שמירה ב-cache
-        const response = await fetch(`${URLS[0]}&_=${new Date().getTime()}`);
-        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-        const text = await response.text();
-        return parseCsvData(text);
-    } catch (error) {
-        console.error("Critical error fetching data:", error);
-        throw error;
-    }
+  try {
+    const response = await fetch(URLS[0]);
+    if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+    const text = await response.text();
+    return parseCsvData(text);
+  } catch (error) {
+    console.error("Critical error fetching data:", error);
+    throw error;
+  }
 };
 
 const parseCsvData = (csvText) => {
-    const lines = csvText.trim().split(/\r?\n/);
-    if (lines.length === 0) throw new Error("CSV file is empty.");
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    
-    const freshDaysData = {};
-    headers.forEach(header => { if (header) freshDaysData[header] = []; });
-    
-    for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-        headers.forEach((header, index) => {
-            if (header && values[index]) freshDaysData[header].push(values[index]);
-        });
-    }
-    return { headers: headers.filter(h => h), freshDaysData };
+  const lines = csvText.trim().split(/\r?\n/);
+  if (lines.length === 0) throw new Error("CSV file is empty.");
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  const freshDaysData = {};
+  headers.forEach(header => {
+    if (header) freshDaysData[header] = [];
+  });
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    headers.forEach((header, index) => {
+      if (header && values[index]) freshDaysData[header].push(values[index]);
+    });
+  }
+  return { headers: headers.filter(h => h), freshDaysData };
 };
 
 const renderTable = (headers) => {
-    const tableHeaders = document.getElementById("tableHeaders");
-    tableHeaders.innerHTML = headers.map(h => {
-        const assignmentCount = getAssignmentCount(h);
-        const indicator = assignmentCount > 0 ? 
-            `<span class="assignment-indicator">${assignmentCount}</span>` : '';
-        return `<th data-day="${h}">${h}${indicator}</th>`;
-    }).join("");
-    
-    document.querySelectorAll("#daysTable th").forEach(headerCell => {
-        headerCell.addEventListener("click", () => openModal(headerCell.dataset.day));
-    });
+  const tableHeaders = document.getElementById("tableHeaders");
+  tableHeaders.innerHTML = headers
+    .map(h => {
+      const assignmentCount = getAssignmentCount(h);
+      const indicator = assignmentCount > 0 ? `<span class="assignment-indicator">${assignmentCount}</span>` : '';
+      return `<th data-day="${h}">${h}${indicator}</th>`;
+    })
+    .join('');
+  document.querySelectorAll("#daysTable th").forEach(headerCell => {
+    headerCell.addEventListener("click", () => openModal(headerCell.dataset.day));
+  });
 };
 
 const getAssignmentCount = (day) => {
-    if (!assignments[day]) return 0;
-    const dayAssignments = assignments[day];
-    return (dayAssignments.runners?.length || 0) +
-           (dayAssignments.waiters?.hall?.length || 0) +
-           (dayAssignments.waiters?.terrace?.length || 0) +
-           (dayAssignments.hostess?.hall?.length || 0) +
-           (dayAssignments.hostess?.terrace?.length || 0) +
-           (dayAssignments.tastings?.length || 0);
+  if (!assignments[day]) return 0;
+  const dayAssignments = assignments[day];
+  return (dayAssignments.runners?.length || 0)
+    + (dayAssignments.waiters?.hall?.length || 0)
+    + (dayAssignments.waiters?.terrace?.length || 0)
+    + (dayAssignments.hostess?.hall?.length || 0)
+    + (dayAssignments.hostess?.terrace?.length || 0)
+    + (dayAssignments.tastings?.length || 0);
 };
 
-// טעינה ראשונית
+// טעינה ראשונית - הקוד המעודכן
 const initializeApp = async () => {
-    // טעינת נתונים שמורים
-    const savedData = storage.loadData();
-    if (savedData) {
-        assignments = savedData.assignments || {};
-        if (savedData.allDaysData) {
-            allDaysData = savedData.allDaysData;
-        }
+  // טעינת נתונים שמורים
+  const savedData = storage.loadData();
+  if (savedData) {
+    assignments = savedData.assignments || {};
+    if (savedData.allDaysData) {
+      allDaysData = savedData.allDaysData;
     }
+  }
 
-    try {
-        // טעינת נתונים חדשים מהגיליון
-        const { headers, freshDaysData } = await tryFetchData();
-        
-        // מיזוג נתונים: אם allDaysData ריק (כמו אחרי איפוס), הוא יקבל את הנתונים החדשים.
-        // אם הוא לא ריק, הוא ישמור על עובדים שנוספו ידנית.
-        Object.keys(freshDaysData).forEach(day => {
-            if (!allDaysData[day]) {
-                allDaysData[day] = [];
-            }
-            // הוספת עובדים חדשים מהגיליון שלא קיימים מקומית
-            freshDaysData[day].forEach(worker => {
-                if (!allDaysData[day].includes(worker)) {
-                    allDaysData[day].push(worker);
-                }
-            });
-        });
-        
-        // אם אין allDaysData כלל, החלף אותו בחדש
-        if (Object.keys(allDaysData).length === 0) {
-            allDaysData = freshDaysData;
-        }
+  try {
+    const { headers, freshDaysData } = await tryFetchData();
 
-        renderTable(Object.keys(allDaysData));
-        showSuccess();
-        
-        storage.saveData(assignments, allDaysData);
-        storage.startAutoSave(assignments, allDaysData);
-        
-    } catch (error) {
-        if (savedData && Object.keys(savedData.allDaysData || {}).length > 0) {
-            const headers = Object.keys(allDaysData);
-            renderTable(headers);
-            showSuccess();
-            storage.updateSaveStatus('warning', 'עובד עם נתונים שמורים - אין חיבור לגיליון');
-        } else {
-            showError(`שגיאה בטעינת הנתונים. ודא שהגיליון פורסם כ-CSV. שגיאה: ${error.message}`);
-        }
+    // שמירה זמנית של עובדים שהוזנו ידנית ואינם קיימים בגיליון
+    const manuallyAddedWorkers = {};
+    Object.keys(allDaysData).forEach(day => {
+      if (freshDaysData[day]) {
+        manuallyAddedWorkers[day] = allDaysData[day].filter(worker => !freshDaysData[day].includes(worker));
+      } else {
+        manuallyAddedWorkers[day] = allDaysData[day];
+      }
+    });
+
+    // עדכון רשימת העובדים הזמינים לכל יום על בסיס הגיליון בלבד
+    allDaysData = {};
+    Object.keys(freshDaysData).forEach(day => {
+      allDaysData[day] = freshDaysData[day];
+      // הוספה חזרה של עובדים שהוזנו ידנית
+      if (manuallyAddedWorkers[day] && manuallyAddedWorkers[day].length > 0) {
+        allDaysData[day] = [...new Set([...allDaysData[day], ...manuallyAddedWorkers[day]])];
+      }
+    });
+
+    renderTable(headers);
+    showSuccess();
+    storage.saveData(assignments, allDaysData);
+    storage.startAutoSave(assignments, allDaysData);
+  } catch (error) {
+    if (Object.keys(allDaysData).length > 0) {
+      // שימוש בנתונים שמורים
+      const headers = Object.keys(allDaysData);
+      renderTable(headers);
+      showSuccess();
+      storage.updateSaveStatus('warning', 'עובד עם נתונים שמורים - אין חיבור לגיליון');
+    } else {
+      showError(`שגיאה בטעינת הנתונים. ודא שהגיליון פורסם כ-CSV. שגיאה: ${error.message}`);
     }
+  }
 };
-
-// תחילת האפליקציה
 initializeApp();
 
-// ============================================================================
-// ==================== פונקציות הממשק ====================
-// ============================================================================
-
+// ========================== פונקציות ממשק ==========================
 const openModal = (day) => {
-    const modal = document.getElementById("assignmentModal");
-    modal.querySelector("#modalTitle").textContent = `שיבוץ ליום ${day}`;
-    modal.dataset.currentDay = day;
-
-    if (!assignments[day]) {
-        assignments[day] = {
-            runners: [], waiters: { hall: [], terrace: [] },
-            hostess: { hall: [], terrace: [] }, tastings: [],
-            arrivalTime: "17:00"
-        };
-    }
-
-    document.getElementById('arrivalTimeInput').value = assignments[day].arrivalTime || "17:00";
-    document.getElementById('workerSearchInput').value = '';
-    updateWorkerLists(day);
-    modal.style.display = "flex";
+  const modal = document.getElementById("assignmentModal");
+  document.getElementById("modalTitle").textContent = `שיבוץ ליום ${day}`;
+  modal.dataset.currentDay = day;
+  if (!assignments[day]) {
+    assignments[day] = {
+      runners: [],
+      waiters: { hall: [], terrace: [] },
+      hostess: { hall: [], terrace: [] },
+      tastings: [],
+      arrivalTime: "17:00"
+    };
+  }
+  document.getElementById('arrivalTimeInput').value = assignments[day].arrivalTime || "17:00";
+  document.getElementById('workerSearchInput').value = '';
+  updateWorkerLists(day);
+  modal.style.display = "flex";
 };
 
 const closeModal = () => {
-    document.getElementById("assignmentModal").style.display = "none";
-    storage.saveData(assignments, allDaysData);
-    renderTable(Object.keys(allDaysData));
+  document.getElementById("assignmentModal").style.display = "none";
+  // שמירה אוטומטית
+  storage.saveData(assignments, allDaysData);
+  // עדכון אינדיקטורים
+  renderTable(Object.keys(allDaysData));
 };
 
+// עדכון רשימות עובדים
 const updateWorkerLists = (day) => {
-    const lists = {
-        available: document.getElementById("availableWorkersList"), 
-        runners: document.getElementById("runnersList"),
-        waitersHall: document.getElementById("waitersHallList"), 
-        waitersTerrace: document.getElementById("waitersTerraceList"),
-        hostessHall: document.getElementById("hostessHallList"), 
-        hostessTerrace: document.getElementById("hostessTerraceList"),
-        tastings: document.getElementById("tastingsList")
-    };
-    Object.values(lists).forEach(list => list.innerHTML = '');
+  const lists = {
+    available: document.getElementById("availableWorkersList"),
+    runners: document.getElementById("runnersList"),
+    waitersHall: document.getElementById("waitersHallList"),
+    waitersTerrace: document.getElementById("waitersTerraceList"),
+    hostessHall: document.getElementById("hostessHallList"),
+    hostessTerrace: document.getElementById("hostessTerraceList"),
+    tastings: document.getElementById("tastingsList")
+  };
 
-    const assignedForDay = assignments[day];
-    const allAvailableForDay = allDaysData[day] || [];
-    
-    const assignedNames = [
-        ...assignedForDay.runners.map(w => w.name), ...assignedForDay.waiters.hall.map(w => w.name),
-        ...assignedForDay.waiters.terrace.map(w => w.name), ...assignedForDay.hostess.hall.map(w => w.name),
-        ...assignedForDay.hostess.terrace.map(w => w.name), ...assignedForDay.tastings.map(w => w.name)
-    ];
+  Object.values(lists).forEach(list => (list.innerHTML = ''));
 
-    const availableWorkers = allAvailableForDay.filter(name => name && !assignedNames.includes(name));
+  const assignedForDay = assignments[day];
+  const allAvailableForDay = allDaysData[day] || [];
+  const assignedNames = [
+    ...assignedForDay.runners.map(w => w.name),
+    ...assignedForDay.waiters.hall.map(w => w.name),
+    ...assignedForDay.waiters.terrace.map(w => w.name),
+    ...assignedForDay.hostess.hall.map(w => w.name),
+    ...assignedForDay.hostess.terrace.map(w => w.name),
+    ...assignedForDay.tastings.map(w => w.name)
+  ];
 
-    availableWorkers.forEach(workerName => {
-        const listItem = document.createElement("li");
-        listItem.className = "user-item";
-        listItem.innerHTML = `<span class="user-name">${workerName}</span>
-            <div class="assign-buttons">
-                <button class="runner" onclick="assignWorker('${workerName}', 'runners')">ראנר</button>
-                <button class="waiter-hall" onclick="assignWorker('${workerName}', 'waiters', 'hall')">מלצר אולם</button>
-                <button class="waiter-terrace" onclick="assignWorker('${workerName}', 'waiters', 'terrace')">מלצר טרסה</button>
-                <button class="hostess-hall" onclick="assignWorker('${workerName}', 'hostess', 'hall')">מארחת אולם</button>
-                <button class="hostess-terrace" onclick="assignWorker('${workerName}', 'hostess', 'terrace')">מארחת טרסה</button>
-                <button class="tastings" onclick="assignWorker('${workerName}', 'tastings')">טעימות</button>
-            </div>`;
-        lists.available.appendChild(listItem);
-    });
-    
-    const createAssignedItem = (worker, role, subRole = null) => {
-        const item = document.createElement("li");
-        item.textContent = worker.name;
-        item.title = "לחץ להסרה";
-        item.onclick = () => unassignWorker(worker.name, role, subRole);
-        return item;
-    };
-    
-    assignedForDay.runners.forEach(worker => lists.runners.appendChild(createAssignedItem(worker, 'runners')));
-    assignedForDay.waiters.hall.forEach(worker => lists.waitersHall.appendChild(createAssignedItem(worker, 'waiters', 'hall')));
-    assignedForDay.waiters.terrace.forEach(worker => lists.waitersTerrace.appendChild(createAssignedItem(worker, 'waiters', 'terrace')));
-    assignedForDay.hostess.hall.forEach(worker => lists.hostessHall.appendChild(createAssignedItem(worker, 'hostess', 'hall')));
-    assignedForDay.hostess.terrace.forEach(worker => lists.hostessTerrace.appendChild(createAssignedItem(worker, 'hostess', 'terrace')));
-    assignedForDay.tastings.forEach(worker => lists.tastings.appendChild(createAssignedItem(worker, 'tastings')));
+  const availableWorkers = allAvailableForDay.filter(name => name && !assignedNames.includes(name));
+  document.getElementById('availableWorkersTitle').textContent = `עובדים זמינים (${availableWorkers.length})`;
+  document.getElementById('runnersTitle').textContent = `ראנרים (${assignedForDay.runners.length})`;
+  document.getElementById('waitersHallTitle').textContent = `אולם (${assignedForDay.waiters.hall.length})`;
+  document.getElementById('waitersTerraceTitle').textContent = `טרסה (${assignedForDay.waiters.terrace.length})`;
+  document.getElementById('hostessHallTitle').textContent = `אולם (${assignedForDay.hostess.hall.length})`;
+  document.getElementById('hostessTerraceTitle').textContent = `טרסה (${assignedForDay.hostess.terrace.length})`;
+  document.getElementById('tastingsTitle').textContent = `טעימות (${assignedForDay.tastings.length})`;
 
-    // עדכון כותרות עם מספר עובדים
-    document.getElementById('availableWorkersTitle').textContent = `עובדים זמינים (${availableWorkers.length})`;
-    document.getElementById('runnersTitle').textContent = `ראנרים (${assignedForDay.runners.length})`;
-    document.getElementById('waitersHallTitle').textContent = `אולם (${assignedForDay.waiters.hall.length})`;
-    document.getElementById('waitersTerraceTitle').textContent = `טרסה (${assignedForDay.waiters.terrace.length})`;
-    document.getElementById('hostessHallTitle').textContent = `אולם (${assignedForDay.hostess.hall.length})`;
-    document.getElementById('hostessTerraceTitle').textContent = `טרסה (${assignedForDay.hostess.terrace.length})`;
-    document.getElementById('tastingsTitle').textContent = `טעימות (${assignedForDay.tastings.length})`;
+  // הוספת עובדים זמינים לרשימה
+  availableWorkers.forEach(workerName => {
+    const listItem = document.createElement("li");
+    listItem.className = "user-item";
+    listItem.innerHTML = `<span class="user-name">${workerName}</span>
+      <div class="assign-buttons">
+        <button class="runner" onclick="assignWorker('${workerName}', 'runners')">ראנר</button>
+        <button class="waiter-hall" onclick="assignWorker('${workerName}', 'waiters', 'hall')">מלצר אולם</button>
+        <button class="waiter-terrace" onclick="assignWorker('${workerName}', 'waiters', 'terrace')">מלצר טרסה</button>
+        <button class="hostess-hall" onclick="assignWorker('${workerName}', 'hostess', 'hall')">מארחת אולם</button>
+        <button class="hostess-terrace" onclick="assignWorker('${workerName}', 'hostess', 'terrace')">מארחת טרסה</button>
+        <button class="tastings" onclick="assignWorker('${workerName}', 'tastings')">טעימות</button>
+      </div>`;
+    lists.available.appendChild(listItem);
+  });
+
+  // יצירת פריטי שיבוץ
+  const createAssignedItem = (worker, role, subRole = null) => {
+    const item = document.createElement("li");
+    item.textContent = worker.name;
+    item.title = "לחץ להסרה";
+    item.onclick = () => unassignWorker(worker.name, role, subRole);
+    return item;
+  };
+
+  assignedForDay.runners.forEach(worker => lists.runners.appendChild(createAssignedItem(worker, 'runners')));
+  assignedForDay.waiters.hall.forEach(worker => lists.waitersHall.appendChild(createAssignedItem(worker, 'waiters', 'hall')));
+  assignedForDay.waiters.terrace.forEach(worker => lists.waitersTerrace.appendChild(createAssignedItem(worker, 'waiters', 'terrace')));
+  assignedForDay.hostess.hall.forEach(worker => lists.hostessHall.appendChild(createAssignedItem(worker, 'hostess', 'hall')));
+  assignedForDay.hostess.terrace.forEach(worker => lists.hostessTerrace.appendChild(createAssignedItem(worker, 'hostess', 'terrace')));
+  assignedForDay.tastings.forEach(worker => lists.tastings.appendChild(createAssignedItem(worker, 'tastings')));
 };
 
 const assignWorker = (workerName, role, subRole = null) => {
-    const day = document.getElementById("assignmentModal").dataset.currentDay;
-    const assignedForDay = assignments[day];
-    
-    const workerData = { name: workerName };
-
-    if (subRole) {
-        if (assignedForDay[role]?.[subRole] && !assignedForDay[role][subRole].some(w => w.name === workerName)) {
-            assignedForDay[role][subRole].push(workerData);
-        }
-    } else {
-        if (Array.isArray(assignedForDay[role]) && !assignedForDay[role].some(w => w.name === workerName)) {
-            assignedForDay[role].push(workerData);
-        }
+  const day = document.getElementById("assignmentModal").dataset.currentDay;
+  const assignedForDay = assignments[day];
+  const workerData = { name: workerName };
+  if (subRole) {
+    if (assignedForDay[role]?.[subRole] && !assignedForDay[role][subRole].some(w => w.name === workerName)) {
+      assignedForDay[role][subRole].push(workerData);
     }
-    updateWorkerLists(day);
-    storage.saveData(assignments, allDaysData);
+  } else {
+    if (Array.isArray(assignedForDay[role]) && !assignedForDay[role].some(w => w.name === workerName)) {
+      assignedForDay[role].push(workerData);
+    }
+  }
+  updateWorkerLists(day);
+  storage.saveData(assignments, allDaysData);
 };
 
 const unassignWorker = (workerName, role, subRole = null) => {
-    const day = document.getElementById("assignmentModal").dataset.currentDay;
-    const assignedForDay = assignments[day];
-    if (subRole) {
-        if (assignedForDay[role]?.[subRole]) {
-            assignedForDay[role][subRole] = assignedForDay[role][subRole].filter(worker => worker.name !== workerName);
-        }
-    } else {
-        if (Array.isArray(assignedForDay[role])) {
-            assignedForDay[role] = assignedForDay[role].filter(worker => worker.name !== workerName);
-        }
+  const day = document.getElementById("assignmentModal").dataset.currentDay;
+  const assignedForDay = assignments[day];
+  if (subRole) {
+    if (assignedForDay[role]?.[subRole]) {
+      assignedForDay[role][subRole] = assignedForDay[role][subRole].filter(w => w.name !== workerName);
     }
-    updateWorkerLists(day);
-    storage.saveData(assignments, allDaysData);
+  } else {
+    if (Array.isArray(assignedForDay[role])) {
+      assignedForDay[role] = assignedForDay[role].filter(w => w.name !== workerName);
+    }
+  }
+  updateWorkerLists(day);
+  storage.saveData(assignments, allDaysData);
 };
 
 const saveArrivalTime = () => {
-    const day = document.getElementById("assignmentModal").dataset.currentDay;
-    if (assignments[day]) {
-        assignments[day].arrivalTime = document.getElementById('arrivalTimeInput').value.trim();
-        storage.saveData(assignments, allDaysData);
-    }
+  const day = document.getElementById("assignmentModal").dataset.currentDay;
+  if (assignments[day]) {
+    assignments[day].arrivalTime = document.getElementById('arrivalTimeInput').value.trim();
+    storage.saveData(assignments, allDaysData);
+  }
 };
 
 const addAvailableWorker = () => {
-    const workerName = prompt("הזן את שם העובד:");
-    if (!workerName || workerName.trim() === '') return;
-    const trimmedName = workerName.trim();
-    const day = document.getElementById("assignmentModal").dataset.currentDay;
-    if (allDaysData[day] && allDaysData[day].includes(trimmedName)) {
-        alert(`העובד "${trimmedName}" כבר קיים ברשימת הזמינים ליום זה.`);
-        return;
-    }
-    if (!allDaysData[day]) allDaysData[day] = [];
-    allDaysData[day].push(trimmedName);
-    updateWorkerLists(day);
-    storage.saveData(assignments, allDaysData);
+  const workerName = prompt("הזן את שם העובד:");
+  if (!workerName || workerName.trim() === '') return;
+  const trimmedName = workerName.trim();
+  const day = document.getElementById("assignmentModal").dataset.currentDay;
+  if (allDaysData[day] && allDaysData[day].includes(trimmedName)) {
+    alert(`העובד "${trimmedName}" כבר קיים ברשימת הזמינים ליום זה.`);
+    return;
+  }
+  if (!allDaysData[day]) allDaysData[day] = [];
+  allDaysData[day].push(trimmedName);
+  updateWorkerLists(day);
+  storage.saveData(assignments, allDaysData);
 };
 
 const filterAvailableWorkers = () => {
-    const input = document.getElementById('workerSearchInput');
-    const filter = input.value.toLowerCase();
-    const ul = document.getElementById('availableWorkersList');
-    const li = ul.getElementsByClassName('user-item');
-    for (let i = 0; i < li.length; i++) {
-        const span = li[i].getElementsByClassName('user-name')[0];
-        const txtValue = span.textContent || span.innerText;
-        li[i].style.display = (txtValue.toLowerCase().indexOf(filter) > -1) ? "flex" : "none";
-    }
+  const input = document.getElementById('workerSearchInput');
+  const filter = input.value.toLowerCase();
+  const ul = document.getElementById('availableWorkersList');
+  const li = ul.getElementsByClassName('user-item');
+  for (let i = 0; i < li.length; i++) {
+    const span = li[i].getElementsByClassName('user-name')[0];
+    const txtValue = span.textContent || span.innerText;
+    li[i].style.display = (txtValue.toLowerCase().indexOf(filter) > -1) ? "flex" : "none";
+  }
 };
 
-// ============================================================================
-// ==================== פונקציות ייבוא/ייצוא/איפוס ====================
-// ============================================================================
+// ========================== פונקציות ייבוא/ייצוא/איפוס ==========================
 
 const showSummary = () => {
-    storage.saveData(assignments, allDaysData);
-    sessionStorage.setItem('workSchedule', JSON.stringify(assignments));
-    window.location.href = 'index.html';
+  storage.saveData(assignments, allDaysData);
+  sessionStorage.setItem('workSchedule', JSON.stringify(assignments));
+  window.location.href = 'index.html';
 };
 
-// ==================== שינוי כאן ====================
-// הפונקציה עודכנה כדי לאפס את כל הנתונים ולטעון מחדש מהגיליון
 const resetAllAssignments = async () => {
-    const confirmMessage = "האם אתה בטוח שברצונך להתחיל סידור חדש?\nפעולה זו תמחק את כל השיבוצים והעובדים שהוספת ידנית, ותטען מחדש את רשימת העובדים המקורית מגוגל שיטס.";
-    if (confirm(confirmMessage)) {
-        // עצירת תהליכים ברקע
-        storage.stopAutoSave();
+  const confirmMessage = "האם אתה בטוח שברצונך לאפס את כל השיבוצים? פעולה זו תמחק את כל הנתונים השמורים ולא ניתן לבטלה.";
+  if (confirm(confirmMessage)) {
+    // מחיקת כל הנתונים המקומיים
+    assignments = {};
+    allDaysData = {};
+    storage.clearAllData();
 
-        // הצגת הודעת טעינה למשתמש
-        const loadingMsg = document.getElementById("loadingMessage");
-        loadingMsg.textContent = "מאפס את המערכת וטוען נתונים עדכניים...";
-        loadingMsg.style.display = "block";
-        document.getElementById("daysTable").style.display = "none";
-        document.getElementById("errorMessage").style.display = "none";
-        
-        // 1. איפוס המשתנים הגלובליים
-        assignments = {};
-        allDaysData = {}; // <-- מחיקת רשימת העובדים הקיימת
-        
-        // 2. מחיקת הנתונים השמורים ב-LocalStorage
-        storage.clearAllData();
-        
-        // 3. טעינה מחדש של האפליקציה מההתחלה
-        // initializeApp יטען את הנתונים מהגיליון, ימלא את allDaysData מחדש, וירנדר את הטבלה
-        try {
-            // קריאה מחדש ל-initializeApp כדי שיביא את הכל מה-Sheet
-            await initializeApp();
-            storage.updateSaveStatus('success', 'המערכת אופסה בהצלחה. נטענו נתונים עדכניים.');
-        } catch (error) {
-            showError(`אירעה שגיאה באיפוס וטעינה מחדש: ${error.message}`);
+    // הסתרת הטבלה
+    document.getElementById("daysTable").style.display = "none";
+
+    // טעינת נתונים מחדש מ-Google Sheets
+    try {
+      const { headers, freshDaysData } = await tryFetchData();
+      Object.keys(freshDaysData).forEach(day => {
+        if (!allDaysData[day]) {
+          allDaysData[day] = freshDaysData[day];
+        } else {
+          // הוספת עובדים חדשים לימים קיימים
+          freshDaysData[day].forEach(worker => {
+            if (!allDaysData[day].includes(worker)) {
+              allDaysData[day].push(worker);
+            }
+          });
         }
+      });
+      renderTable(headers);
+      alert("כל השיבוצים נמחקו ונתוני הגיליון נטענו מחדש.");
+    } catch (error) {
+      alert("שגיאה בטעינת הנתונים מ-Google Sheets: " + error.message);
     }
+  }
 };
 
 const exportData = () => {
-    storage.exportToFile(assignments, allDaysData);
+  storage.exportToFile(assignments, allDaysData);
 };
 
 const importData = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const confirmMessage = "ייבוא הקובץ יחליף את כל הנתונים הנוכחיים. האם להמשיך?";
-    if (!confirm(confirmMessage)) {
-        event.target.value = '';
-        return;
-    }
-
-    storage.importFromFile(file, (importedData) => {
-        assignments = importedData.assignments || {};
-        allDaysData = importedData.allDaysData || {};
-        storage.saveData(assignments, allDaysData);
-        renderTable(Object.keys(allDaysData));
-        event.target.value = '';
-    });
-};
-
-// ============================================================================
-// ==================== Event Listeners ====================
-// ============================================================================
-
-window.onclick = (event) => {
-    if (event.target == document.getElementById("assignmentModal")) {
-        closeModal();
-    }
-};
-
-window.addEventListener('beforeunload', () => {
+  const file = event.target.files[0];
+  if (!file) return;
+  const confirmMessage = "ייבוא הקובץ יחליף את כל הנתונים הנוכחיים. האם להמשיך?";
+  if (!confirm(confirmMessage)) {
+    event.target.value = '';
+    return;
+  }
+  storage.importFromFile(file, (importedData) => {
+    assignments = importedData.assignments || {};
+    allDaysData = importedData.allDaysData || {};
     storage.saveData(assignments, allDaysData);
-    storage.stopAutoSave();
-});
+    renderTable(Object.keys(allDaysData));
+    event.target.value = '';
+  });
+};
 
+// ========================== אירועים ==========================
+window.onclick = (event) => {
+  if (event.target == document.getElementById("assignmentModal")) {
+    closeModal();
+  }
+};
+window.addEventListener('beforeunload', () => {
+  storage.saveData(assignments, allDaysData);
+  storage.stopAutoSave();
+});
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        storage.saveData(assignments, allDaysData);
-    }
+  if (document.hidden) {
+    storage.saveData(assignments, allDaysData);
+  }
 });
 
 </script>
-
 </body>
-</html>```
+</html>
