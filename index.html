@@ -1,3 +1,18 @@
+const canvas = await html2canvas(elementToCapture, {
+    // ...אפשרויות אחרות...
+    width: elementToCapture.scrollWidth,  // תצלם ברוחב המלא של התוכן
+    height: elementToCapture.scrollHeight, // תצלם בגובה המלא של התוכן
+    windowWidth: elementToCapture.scrollWidth,
+    windowHeight: elementToCapture.scrollHeight,
+    // ...
+});
+```זהו התיקון המשמעותי ביותר שאמור לפתור את בעיית החיתוך אחת ולתמיד.
+
+### הקוד המלא והמתוקן (עבור `index.html`)
+
+אנא החלף את כל הקוד בקובץ `index.html` (דף הסיכום) בקוד הבא. זה כולל את הלוגיקה המשופרת לייצוא ה-PDF.
+
+```html
 <!DOCTYPE html>
 <html lang="he">
 <head>
@@ -60,6 +75,8 @@ h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
     flex: 1 1 220px; background-color: #f2f2f2; padding: 15px;
     border-radius: var(--border-radius); box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     text-align: center;
+    /* מונע שבירת עמוד באמצע עמודה בעת הדפסה */
+    page-break-inside: avoid;
 }
 
 .day-title {
@@ -299,7 +316,7 @@ function calculateScheduleStats(schedule) {
 }
 
 // =========================================================================
-// ============ קוד ייצוא PDF משופר עם חלוקה לעמודים ============
+// ============ קוד ייצוא PDF סופי ומשופר ============
 // =========================================================================
 
 document.getElementById('exportButton').addEventListener('click', async () => {
@@ -308,7 +325,7 @@ document.getElementById('exportButton').addEventListener('click', async () => {
     const originalButtonText = exportButton.textContent;
     const elementToCapture = document.getElementById('capture');
 
-    // שלב 1: הכנה לצילום
+    // --- שלב 1: הכנה לצילום ---
     exportButton.textContent = 'מייצא, נא להמתין...';
     exportButton.disabled = true;
     backButton.style.display = 'none';
@@ -320,51 +337,53 @@ document.getElementById('exportButton').addEventListener('click', async () => {
 
     // גלילה לראש העמוד ושינוי סגנונות זמני כדי לאפשר רינדור מלא
     window.scrollTo(0, 0);
-    document.body.style.height = 'auto';
-    document.body.style.overflow = 'visible';
-    document.documentElement.style.height = 'auto';
-    document.documentElement.style.overflow = 'visible';
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
     
-    await new Promise(resolve => setTimeout(resolve, 100)); // המתנה קצרה לעדכון התצוגה
+    await new Promise(resolve => setTimeout(resolve, 150)); // המתנה קצרה לעדכון התצוגה
 
     try {
         const { jsPDF } = window.jspdf;
 
-        // שלב 2: צילום האלמנט
+        // --- שלב 2: צילום האלמנט עם הגדרות מפורשות ---
         const canvas = await html2canvas(elementToCapture, {
-            scale: 2.5, // רזולוציה גבוהה
+            scale: 2.5,
             useCORS: true,
             allowTaint: true,
+            // הגדרות קריטיות לפתרון בעיית החיתוך
+            width: elementToCapture.scrollWidth,
+            height: elementToCapture.scrollHeight,
             windowWidth: elementToCapture.scrollWidth,
             windowHeight: elementToCapture.scrollHeight,
-            scrollY: 0
+            scrollY: 0,
+            scrollX: 0
         });
 
         const imgData = canvas.toDataURL('image/png', 1.0);
         
-        // שלב 3: יצירת PDF מחולק לעמודים
+        // --- שלב 3: יצירת PDF מחולק לעמודים ---
         const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
         
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = imgHeight / imgWidth;
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasHeight / canvasWidth;
         
-        const pdfImgHeight = pageWidth * ratio;
-        let heightLeft = pdfImgHeight;
+        const imgHeightInPdf = pdfWidth * ratio;
+        let heightLeft = imgHeightInPdf;
         let position = 0;
 
         // הוספת העמוד הראשון
-        pdf.addImage(imgData, 'PNG', 0, position, pageWidth, pdfImgHeight);
-        heightLeft -= pageHeight;
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdf);
+        heightLeft -= pdfHeight;
 
         // הוספת עמודים נוספים במידת הצורך
         while (heightLeft > 0) {
-            position = -heightLeft;
+            position -= pdfHeight; // הזזת התמונה "למעלה" בעמוד הבא
             pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, pageWidth, pdfImgHeight);
-            heightLeft -= pageHeight;
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdf);
+            heightLeft -= pdfHeight;
         }
         
         const date = new Date();
@@ -375,7 +394,7 @@ document.getElementById('exportButton').addEventListener('click', async () => {
         console.error("An error occurred during PDF export:", error);
         alert("אירעה שגיאה במהלך ייצוא ה-PDF.");
     } finally {
-        // שלב 4: ניקוי ושחזור
+        // --- שלב 4: ניקוי ושחזור ---
         document.body.style.cssText = originalBodyStyle;
         document.documentElement.style.cssText = originalHtmlStyle;
 
