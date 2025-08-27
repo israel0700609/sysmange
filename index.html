@@ -143,50 +143,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==================== ייצוא PDF מלא בלי חיתוך שמות ====================
 document.getElementById('exportButton').addEventListener('click', async ()=>{
-    const btn=document.getElementById('exportButton');
-    const backBtn=document.getElementById('backButton');
-    const element=document.getElementById('capture');
+    const btn = document.getElementById('exportButton');
+    const backBtn = document.getElementById('backButton');
+    const element = document.getElementById('capture');
 
-    btn.disabled=true; btn.textContent='מייצא...';
-    backBtn.style.display='none';
+    btn.disabled = true; btn.textContent = 'מייצא...';
+    backBtn.style.display = 'none';
 
-    await new Promise(r=>setTimeout(r,150));
+    await new Promise(r => setTimeout(r, 150));
 
-    const canvas = await html2canvas(element, {scale:3, useCORS:true, allowTaint:true});
-    const imgData = canvas.toDataURL('image/png',1.0);
+    const canvas = await html2canvas(element, { scale: 3, useCORS: true, allowTaint: true });
+    const imgData = canvas.toDataURL('image/png', 1.0);
 
     const { jsPDF } = window.jspdf;
-    const pdf=new jsPDF('p','mm','a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
 
+    // יחס המרה בין פיקסלים ל-millimeter
     const pxWidth = canvas.width;
     const pxHeight = canvas.height;
-    const ratio = pageWidth / pxWidth;
-    const imgHeightMM = pxHeight * ratio;
+    const mmWidth = 210; // רוחב עמוד A4 במ"מ
+    const ratio = mmWidth / pxWidth;
+    const mmHeight = pxHeight * ratio;
 
-    let heightLeft = imgHeightMM;
-    let position = 0;
+    // יצירת PDF עם גובה מותאם
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: [mmWidth, mmHeight] });
+    pdf.addImage(imgData, 'PNG', 0, 0, mmWidth, mmHeight);
 
-    // הוספת העמוד הראשון
-    pdf.addImage(imgData,'PNG',0,0,pageWidth,imgHeightMM);
-    heightLeft -= pageHeight;
+    const date = new Date();
+    const formattedDate = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+    pdf.save(`work-schedule-long-${formattedDate}.pdf`);
 
-    // המשך בעמודים נוספים אם צריך
-    while(heightLeft>0){
-        position -= pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData,'PNG',0,position,pageWidth,imgHeightMM);
-        heightLeft -= pageHeight;
-    }
-
-    const date=new Date();
-    const formattedDate=`${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
-    pdf.save(`work-schedule-${formattedDate}.pdf`);
-
-    btn.disabled=false; btn.textContent='ייצוא ל-PDF';
-    backBtn.style.display='inline-block';
+    btn.disabled = false; 
+    btn.textContent = 'ייצוא ל-PDF';
+    backBtn.style.display = 'inline-block';
 });
+
 </script>
 </body>
 </html>
