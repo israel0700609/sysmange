@@ -19,14 +19,8 @@
     --tastings-bg: #17a2b8; --light-gray: #f8f9fa; --text-color: #313e4b;
     --border-radius: 0.5rem; --shadow-md: 0 .5rem 1rem rgba(0,0,0,.15);
 }
-body {
-    font-family: 'Rubik', sans-serif; direction: rtl; padding: 20px;
-    background-color: var(--light-gray); color: var(--text-color);
-}
-.container {
-    max-width: 95%; margin: 0 auto; background-color: #fff;
-    padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-md);
-}
+body { font-family: 'Rubik', sans-serif; direction: rtl; padding: 20px; background-color: var(--light-gray); color: var(--text-color); }
+.container { max-width: 95%; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-md); }
 h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; }
 .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 30px; }
 .legend-item { display: flex; align-items: center; gap: 8px; font-size: 1rem; }
@@ -147,29 +141,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ==================== ייצוא PDF – עמוד אחד ארוך ====================
+// ==================== ייצוא PDF מלא בלי חיתוך שמות ====================
 document.getElementById('exportButton').addEventListener('click', async ()=>{
-    const btn = document.getElementById('exportButton');
-    const backBtn = document.getElementById('backButton');
-    const element = document.getElementById('capture');
+    const btn=document.getElementById('exportButton');
+    const backBtn=document.getElementById('backButton');
+    const element=document.getElementById('capture');
 
     btn.disabled=true; btn.textContent='מייצא...';
     backBtn.style.display='none';
 
-    await new Promise(r=>setTimeout(r,150)); // המתנה קצרה
+    await new Promise(r=>setTimeout(r,150));
 
-    const canvas = await html2canvas(element,{scale:3, useCORS:true, allowTaint:true});
+    const canvas = await html2canvas(element, {scale:3, useCORS:true, allowTaint:true});
     const imgData = canvas.toDataURL('image/png',1.0);
 
-    const {jsPDF} = window.jspdf;
-    const pdf = new jsPDF({
-        orientation:'p',
-        unit:'px',
-        format:[canvas.width, canvas.height] // גובה מותאם לפי התמונה
-    });
-    pdf.addImage(imgData,'PNG',0,0,canvas.width,canvas.height);
+    const { jsPDF } = window.jspdf;
+    const pdf=new jsPDF('p','mm','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
 
-    pdf.save("work-schedule-full.pdf");
+    const pxWidth = canvas.width;
+    const pxHeight = canvas.height;
+    const ratio = pageWidth / pxWidth;
+    const imgHeightMM = pxHeight * ratio;
+
+    let heightLeft = imgHeightMM;
+    let position = 0;
+
+    // הוספת העמוד הראשון
+    pdf.addImage(imgData,'PNG',0,0,pageWidth,imgHeightMM);
+    heightLeft -= pageHeight;
+
+    // המשך בעמודים נוספים אם צריך
+    while(heightLeft>0){
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData,'PNG',0,position,pageWidth,imgHeightMM);
+        heightLeft -= pageHeight;
+    }
+
+    const date=new Date();
+    const formattedDate=`${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+    pdf.save(`work-schedule-${formattedDate}.pdf`);
 
     btn.disabled=false; btn.textContent='ייצוא ל-PDF';
     backBtn.style.display='inline-block';
