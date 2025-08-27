@@ -2,7 +2,7 @@
 <html lang="he">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת שיבוץ עובדים</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -392,6 +392,7 @@ const closeModal = () => {
     renderTable(Object.keys(allDaysData));
 };
 
+// ====================== קוד מתוקן ======================
 const updateWorkerLists = (day) => {
     const lists = {
         available: document.getElementById("availableWorkersList"), runners: document.getElementById("runnersList"),
@@ -403,7 +404,27 @@ const updateWorkerLists = (day) => {
 
     const assignedForDay = assignments[day] || {};
     const allAvailableForDay = allDaysData[day] || [];
-    const assignedNames = Object.values(assignedForDay).flat(Infinity).map(w => w.name).filter(Boolean);
+
+    const getAssignedNames = (dayAssignments) => {
+        if (!dayAssignments) return [];
+        const names = new Set();
+        
+        (dayAssignments.runners || []).forEach(w => names.add(w.name));
+        (dayAssignments.tastings || []).forEach(w => names.add(w.name));
+
+        if (dayAssignments.waiters) {
+            (dayAssignments.waiters.hall || []).forEach(w => names.add(w.name));
+            (dayAssignments.waiters.terrace || []).forEach(w => names.add(w.name));
+        }
+        if (dayAssignments.hostess) {
+            (dayAssignments.hostess.hall || []).forEach(w => names.add(w.name));
+            (dayAssignments.hostess.terrace || []).forEach(w => names.add(w.name));
+        }
+
+        return Array.from(names);
+    };
+    const assignedNames = getAssignedNames(assignedForDay);
+
     const availableWorkers = allAvailableForDay.filter(name => name && !assignedNames.includes(name));
 
     availableWorkers.forEach(workerName => {
@@ -435,6 +456,8 @@ const updateWorkerLists = (day) => {
     document.getElementById('hostessTerraceTitle').textContent = `טרסה (${(assignedForDay.hostess?.terrace || []).length})`;
     document.getElementById('tastingsTitle').textContent = `טעימות (${(assignedForDay.tastings || []).length})`;
 };
+// ========================================================
+
 
 const assignWorker = (workerName, role, subRole = null) => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
@@ -445,7 +468,7 @@ const assignWorker = (workerName, role, subRole = null) => {
         if (!assignments[day][role].some(w => w.name === workerName)) assignments[day][role].push(workerData);
     }
     updateWorkerLists(day);
-    storage.saveData({ assignments, allDaysData }); // <-- תיקון: שמירה מיידית
+    storage.saveData({ assignments, allDaysData });
 };
 
 const unassignWorker = (workerName, role, subRole = null) => {
@@ -456,14 +479,14 @@ const unassignWorker = (workerName, role, subRole = null) => {
         assignments[day][role] = assignments[day][role].filter(w => w.name !== workerName);
     }
     updateWorkerLists(day);
-    storage.saveData({ assignments, allDaysData }); // <-- תיקון: שמירה מיידית
+    storage.saveData({ assignments, allDaysData });
 };
 
 const saveArrivalTime = () => {
     const day = document.getElementById("assignmentModal").dataset.currentDay;
     if (assignments[day]) {
         assignments[day].arrivalTime = document.getElementById('arrivalTimeInput').value.trim();
-        storage.saveData({ assignments, allDaysData }); // <-- תיקון: שמירה מיידית
+        storage.saveData({ assignments, allDaysData });
     }
 };
 
@@ -479,7 +502,7 @@ const addAvailableWorker = () => {
     }
     allDaysData[day].push(trimmedName);
     updateWorkerLists(day);
-    storage.saveData({ assignments, allDaysData }); // <-- תיקון: שמירה מיידית
+    storage.saveData({ assignments, allDaysData });
 };
 
 const filterAvailableWorkers = () => {
@@ -499,13 +522,10 @@ const showSummary = () => {
 const resetAllData = () => {
     const confirmMessage = "האם אתה בטוח?\nפעולה זו תמחק לצמיתות את כל השיבוצים וגם את כל העובדים שהוספת ידנית.";
     if (confirm(confirmMessage)) {
-        // איפוס המשתנים בזיכרון הנוכחי
         assignments = {};
         allDaysData = {};
-        // מחיקת כל הנתונים מהאחסון
         storage.clearAllData();
         alert("כל הנתונים נמחקו. המערכת תטען מחדש עם נתונים נקיים מהגיליון.");
-        // טעינה מחדש של הדף כדי להתחיל נקי
         location.reload();
     }
 };
