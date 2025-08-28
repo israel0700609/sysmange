@@ -1,245 +1,333 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>סיכום סידור עבודה - לפי ימים</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>סיכום סידור עבודה - לפי ימים</title>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 
-<script>
-// פונקציה לטעינת ספריות חיצוניות
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-}
-
-// טען את html2canvas כשהדף נטען
-window.addEventListener('DOMContentLoaded', async () => {
-    try {
-        console.log('טוען html2canvas...');
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-        console.log('html2canvas נטען בהצלחה');
-        
-        // עדכן את כפתור הייצוא
-        const exportBtn = document.getElementById('exportImageButton');
-        if (exportBtn) {
-            exportBtn.style.opacity = '1';
-            exportBtn.disabled = false;
-        }
-    } catch (error) {
-        console.error('שגיאה בטעינת html2canvas:', error);
-        const exportBtn = document.getElementById('exportImageButton');
-        if (exportBtn) {
-            exportBtn.textContent = 'ייצוא לא זמין';
-            exportBtn.disabled = true;
-            exportBtn.style.backgroundColor = '#ccc';
-        }
+    <style>
+    :root{
+        --primary-color:#007bff;
+        --success-color:#28a745;
+        --runner-bg:#28a745;
+        --waiter-hall-bg:#38516d;
+        --waiter-terrace-bg:#022346;
+        --hostess-hall-bg:#96009b;
+        --hostess-terrace-bg:#ff7fc7;
+        --tastings-bg:#17a2b8;
+        --light-gray:#f8f9fa;
+        --text-color:#313e4b;
+        --border-radius:.5rem;
+        --shadow-md:0 .5rem 1rem rgba(0,0,0,.15);
     }
-});
-</script>
+    html,body{height:100%}
+    body{
+        font-family:'Rubik',sans-serif;
+        direction:rtl;
+        padding:20px;
+        background-color:var(--light-gray);
+        color:var(--text-color);
+    }
+    .container{
+        max-width:1200px;
+        margin:0 auto;
+        background:#fff;
+        padding:24px;
+        border-radius:var(--border-radius);
+        box-shadow:var(--shadow-md);
+    }
+    h2{
+        text-align:center;
+        margin-bottom:20px;
+        font-size:2.0rem;
+        font-weight:700;
+        color:var(--primary-color);
+    }
+    .legend{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-bottom:20px}
+    .legend-item{display:flex;align-items:center;gap:8px;font-weight:500}
+    .legend-color{width:18px;height:18px;border-radius:4px;display:inline-block}
 
-<style>
-:root {
-    --primary-color: #007bff; --success-color: #28a745; --runner-bg: #28a745; --waiter-hall-bg: #38516d;
-    --waiter-terrace-bg: #022346; --hostess-hall-bg: #96009b; --hostess-terrace-bg: #ff7fc7;
-    --tastings-bg: #17a2b8; --light-gray: #f8f9fa; --text-color: #313e4b;
-    --border-radius: 0.5rem; --shadow-md: 0 .5rem 1rem rgba(0,0,0,.15);
-}
-body { font-family: 'Rubik', sans-serif; direction: rtl; padding: 20px; background-color: var(--light-gray); color: var(--text-color); }
-.container { max-width: 95%; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-md); }
-h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; font-weight: 700; }
-.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 30px; }
-.legend-item { display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 500; }
-.legend-color { width: 20px; height: 20px; border-radius: 4px; display: inline-block; }
-#scheduleByDayContainer { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 20px; }
-.day-column { flex: 1 1 220px; min-width: 220px; background-color: #f8f9fa; padding: 15px; border-radius: var(--border-radius); box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border: 1px solid #e9ecef; }
-.day-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; color: var(--primary-color); }
-.arrival-time { font-size: 1rem; font-weight: 500; color: #6c757d; margin-top: 0; margin-bottom: 15px; background-color: #fff; padding: 5px 10px; border-radius: 4px; border: 1px solid #dee2e6; }
-.worker-list { list-style: none; padding: 0; margin: 0; }
-.worker-item { padding: 10px 12px; margin-bottom: 8px; border-radius: 6px; font-weight: 500; color: white; font-size: 0.95rem; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-.role-runners { background-color: var(--runner-bg); }
-.role-waiters-hall { background-color: var(--waiter-hall-bg); }
-.role-waiters-terrace { background-color: var(--waiter-terrace-bg); }
-.role-hostess-hall { background-color: var(--hostess-hall-bg); }
-.role-hostess-terrace { background-color: var(--hostess-terrace-bg); color: #000; }
-.role-tastings { background-color: var(--tastings-bg); }
-#no-data-message { display: none; text-align: center; font-size: 1.2rem; padding: 40px; background-color: #fff3cd; color: #856404; border-radius: var(--border-radius); border: 1px solid #ffeaa7; }
-.navigation-buttons { text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-.nav-button { padding: 12px 25px; font-size: 1.1rem; color: #fff; border: none; border-radius: var(--border-radius); cursor: pointer; text-decoration: none; transition: all 0.2s ease; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.nav-button:hover { filter: brightness(110%); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
-#backButton { background-color: var(--primary-color); }
-#exportImageButton { background-color: var(--success-color); opacity: 0.5; }
-.nav-button:disabled { background-color: #aaa; cursor: not-allowed; }
-@media (max-width: 768px) { body { padding: 10px; } .container { padding: 15px; } .navigation-buttons { flex-direction: column; align-items: center; } .nav-button { width: 80%; max-width: 300px; } }
-</style>
+    #scheduleByDayContainer{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:18px}
+    .day-column{
+        flex:1 1 240px;
+        min-width:220px;
+        background:#f8f9fa;
+        padding:12px;
+        border-radius:var(--border-radius);
+        box-shadow:0 2px 8px rgba(0,0,0,0.08);
+        text-align:center;
+        border:1px solid #e9ecef;
+    }
+    .day-title{font-size:1.2rem;font-weight:700;margin-bottom:6px;color:var(--primary-color)}
+    .arrival-time{font-size:0.95rem;font-weight:500;color:#6c757d;margin:6px 0;padding:6px;border-radius:6px;background:#fff;border:1px solid #dee2e6}
+    .worker-list{list-style:none;padding:0;margin:8px 0 0 0;text-align:center}
+    .worker-item{padding:8px 10px;margin:6px 0;border-radius:8px;font-weight:600;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.12);font-size:0.95rem}
+    .role-runners{background-color:var(--runner-bg)}
+    .role-waiters-hall{background-color:var(--waiter-hall-bg)}
+    .role-waiters-terrace{background-color:var(--waiter-terrace-bg)}
+    .role-hostess-hall{background-color:var(--hostess-hall-bg)}
+    .role-hostess-terrace{background-color:var(--hostess-terrace-bg); color:#000}
+    .role-tastings{background-color:var(--tastings-bg)}
+
+    #no-data-message{display:none;text-align:center;font-size:1.1rem;padding:24px;background:#fff3cd;color:#856404;border-radius:var(--border-radius);border:1px solid #ffeaa7;margin-top:18px}
+
+    .navigation-buttons{text-align:center;margin-top:20px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+    .nav-button{padding:10px 18px;font-size:1rem;color:#fff;border:none;border-radius:10px;cursor:pointer;transition:all .15s ease;display:inline-flex;align-items:center;gap:8px}
+    .nav-button:hover{filter:brightness(110%);transform:translateY(-2px)}
+    #backButton{background:var(--primary-color);text-decoration:none}
+    #exportImageButton{background:var(--success-color);opacity:.6}
+    .nav-button:disabled{background:#aaa;cursor:not-allowed;opacity:.9}
+
+    @media (max-width:768px){
+        body{padding:12px}
+        .container{padding:12px}
+        .day-column{flex-basis:100%;min-width:unset}
+        .nav-button{width:80%;max-width:320px}
+    }
+    </style>
 </head>
 <body>
-<div id="capture">
-    <div class="container">
+    <div class="container" id="capture">
         <h2>סיכום סידור עבודה - לפי ימים</h2>
-        <div class="legend">
-            <div class="legend-item"><span class="legend-color" style="background-color: var(--runner-bg);"></span>ראנר</div>
-            <div class="legend-item"><span class="legend-color" style="background-color: var(--waiter-hall-bg);"></span>מלצר אולם</div>
-            <div class="legend-item"><span class="legend-color" style="background-color: var(--waiter-terrace-bg);"></span>מלצר טרסה</div>
-            <div class="legend-item"><span class="legend-color" style="background-color: var(--tastings-bg);"></span>טעימות</div>
-            <div class="legend-item"><span class="legend-color" style="background-color: var(--hostess-hall-bg);"></span>מארחת אולם</div>
-            <div class="legend-item"><span class="legend-color" style="background-color: var(--hostess-terrace-bg);"></span>מארחת טרסה</div>
+
+        <div class="legend" aria-hidden="true">
+            <div class="legend-item"><span class="legend-color" style="background-color:var(--runner-bg)"></span>ראנר</div>
+            <div class="legend-item"><span class="legend-color" style="background-color:var(--waiter-hall-bg)"></span>מלצר אולם</div>
+            <div class="legend-item"><span class="legend-color" style="background-color:var(--waiter-terrace-bg)"></span>מלצר טרסה</div>
+            <div class="legend-item"><span class="legend-color" style="background-color:var(--tastings-bg)"></span>טעימות</div>
+            <div class="legend-item"><span class="legend-color" style="background-color:var(--hostess-hall-bg)"></span>מארחת אולם</div>
+            <div class="legend-item"><span class="legend-color" style="background-color:var(--hostess-terrace-bg)"></span>מארחת טרסה</div>
         </div>
-        <div id="scheduleByDayContainer"></div>
-        <div id="no-data-message">
-            <h3>אין נתוני שיבוץ</h3>
-            <p>לא נמצא סידור עבודה שמור. יש לחזור לדף השיבוץ ולשבץ עובדים תחילה.</p>
+
+        <div id="scheduleByDayContainer" aria-live="polite"></div>
+
+        <div id="no-data-message" role="status" aria-hidden="true">
+            <h3 style="margin:0 0 8px 0">אין נתוני שיבוץ</h3>
+            <p style="margin:0">לא נמצא סידור עבודה שמור. יש לחזור לדף השיבוץ ולשבץ עובדים תחילה.</p>
         </div>
     </div>
-</div>
-<div class="navigation-buttons">
-    <a href="main.html" id="backButton" class="nav-button">חזרה לדף השיבוץ</a>
-    <button id="exportImageButton" class="nav-button">ייצוא כתמונה</button>
-</div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    let schedule;
-    try {
-        const scheduleDataString = localStorage.getItem('workSchedule'); // ✅ שימוש ב-localStorage
-        schedule = scheduleDataString ? JSON.parse(scheduleDataString) : null;
-    } catch (error) {
-        console.log('שגיאה בקריאת נתוני הסידור:', error);
-        schedule = null;
+    <div class="navigation-buttons">
+        <a id="backButton" class="nav-button" href="main.html">חזרה לדף השיבוץ</a>
+        <button id="exportImageButton" class="nav-button" disabled>ייצוא כתמונה</button>
+    </div>
+
+    <script>
+    // helper כדי לטעון ספריה חיצונית
+    function loadScript(src){
+        return new Promise((resolve,reject)=>{
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('failed to load ' + src));
+            document.head.appendChild(s);
+        });
     }
 
-    const container = document.getElementById('scheduleByDayContainer');
-    const noDataMsg = document.getElementById('no-data-message');
-    const exportButton = document.getElementById('exportImageButton');
-    const dayOrder = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-    const MAX_PER_COLUMN = 30; 
-    let hasAssignments = false;
+    document.addEventListener('DOMContentLoaded', () => {
+        // נטען html2canvas ברקע (לא מחכה לו להצגה)
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
+            .then(()=> {
+                const exportBtn = document.getElementById('exportImageButton');
+                exportBtn.disabled = false;
+                exportBtn.style.opacity = '1';
+            })
+            .catch((err)=>{
+                console.warn('html2canvas לא נטען:', err);
+                const exportBtn = document.getElementById('exportImageButton');
+                exportBtn.textContent = 'ייצוא לא זמין';
+                exportBtn.disabled = true;
+                exportBtn.style.backgroundColor = '#ccc';
+                exportBtn.style.opacity = '1';
+            });
 
-    if (schedule) {
-        const sortedDays = Object.keys(schedule).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
-        sortedDays.forEach(day => {
-            const dayData = schedule[day];
-            if (!dayData) return;
-
-            const mapWorker = w => ({ name: w.name });
-            const addRole = (workers, role) => workers.map(w => ({ ...mapWorker(w), role }));
-
-            const runners = addRole(dayData.runners || [], 'role-runners');
-            const waitersHall = addRole(dayData.waiters?.hall || [], 'role-waiters-hall');
-            const waitersTerrace = addRole(dayData.waiters?.terrace || [], 'role-waiters-terrace');
-            const tastings = addRole(dayData.tastings || [], 'role-tastings');
-            const hostessHall = addRole(dayData.hostess?.hall || [], 'role-hostess-hall');
-            const hostessTerrace = addRole(dayData.hostess?.terrace || [], 'role-hostess-terrace');
-
-            const allWorkers = [...runners, ...waitersHall, ...waitersTerrace, ...tastings, ...hostessHall, ...hostessTerrace];
-
-            if (allWorkers.length > 0) {
-                hasAssignments = true;
-                const totalColumns = Math.ceil(allWorkers.length / MAX_PER_COLUMN);
-                for (let col = 0; col < totalColumns; col++) {
-                    const dayColumn = document.createElement('div');
-                    dayColumn.className = 'day-column';
-                    const dayTitle = document.createElement('h3');
-                    dayTitle.className = 'day-title';
-                    dayTitle.textContent = col === 0 ? day : `${day} - המשך ${col + 1}`;
-                    dayColumn.appendChild(dayTitle);
-                    if (dayData.arrivalTime) {
-                        const arrivalTimeEl = document.createElement('p');
-                        arrivalTimeEl.className = 'arrival-time';
-                        arrivalTimeEl.textContent = `שעת הגעה: ${dayData.arrivalTime}`;
-                        dayColumn.appendChild(arrivalTimeEl);
+        // טען את הנתונים - קודם sessionStorage (הכי עדכני), אחר כך localStorage
+        let assignments = null;
+        try {
+            const sessionData = sessionStorage.getItem('workSchedule');
+            if (sessionData) {
+                assignments = JSON.parse(sessionData);
+            } else {
+                // ניסיון לקרוא localStorage - יתמוך במבנה שהבנית: { assignments, allDaysData, timestamp, version }
+                const localRaw = localStorage.getItem('workScheduleData') || localStorage.getItem('workSchedule');
+                if (localRaw) {
+                    try {
+                        const parsed = JSON.parse(localRaw);
+                        // אם זה האובייקט המלא - יש לו שדה assignments; אחרת יתכן שהמשתמש שמר רק את ה-assignments
+                        assignments = parsed.assignments ? parsed.assignments : parsed;
+                    } catch(e) {
+                        console.warn('שגיאה בפיענוח ה-localStorage:', e);
+                        assignments = null;
                     }
-                    const workerList = document.createElement('ul');
-                    workerList.className = 'worker-list';
-                    const startIndex = col * MAX_PER_COLUMN;
-                    const endIndex = startIndex + MAX_PER_COLUMN;
-                    const workersInColumn = allWorkers.slice(startIndex, endIndex);
-                    workersInColumn.forEach(worker => {
-                        const li = document.createElement('li');
-                        li.className = `worker-item ${worker.role}`;
-                        li.textContent = worker.name;
-                        workerList.appendChild(li);
-                    });
-                    dayColumn.appendChild(workerList);
-                    container.appendChild(dayColumn);
                 }
             }
-        });
+        } catch (e) {
+            console.warn('שגיאה בקריאת session/local storage:', e);
+            assignments = null;
+        }
+
+        if (assignments && Object.keys(assignments).length > 0) {
+            renderSchedule(assignments);
+        } else {
+            document.getElementById('no-data-message').style.display = 'block';
+            document.getElementById('exportImageButton').style.display = 'none';
+        }
+    });
+
+    function normalizeWorker(w){
+        if (!w) return null;
+        if (typeof w === 'string') return {name: w};
+        if (typeof w === 'object' && (w.name || w.username)) return { name: w.name || w.username };
+        return { name: String(w) };
     }
 
-    if (!hasAssignments) {
-        noDataMsg.style.display = 'block';
-        exportButton.style.display = 'none';
-    }
-});
+    function renderSchedule(schedule) {
+        const container = document.getElementById('scheduleByDayContainer');
+        container.innerHTML = '';
+        document.getElementById('no-data-message').style.display = 'none';
+        const dayOrder = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+        const MAX_PER_COLUMN = 30;
+        let hasAny = false;
 
-// --- ייצוא כתמונה ---
-document.getElementById('exportImageButton').addEventListener('click', async () => {
-    if (typeof html2canvas === 'undefined') {
-        alert('html2canvas עדיין לא נטען. אנא המתן מספר שניות ונסה שוב.');
-        return;
-    }
-    const element = document.getElementById('capture');
-    const btn = document.getElementById('exportImageButton');
-    const backBtn = document.getElementById('backButton');
-    btn.disabled = true;
-    btn.textContent = 'מכין תמונה...';
-    backBtn.style.display = 'none';
-    const originalDirection = document.body.style.direction;
-    const originalTextAlign = document.body.style.textAlign;
-    try {
-        const canvas = await html2canvas(element, { 
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#f8f9fa',
-            logging: false,
-            allowTaint: true,
-            foreignObjectRendering: false,
-            imageTimeout: 15000,
-            scrollX: 0,
-            scrollY: 0,
-            x: 0,
-            y: 0,
-            width: element.scrollWidth,
-            height: element.scrollHeight,
-            windowWidth: element.scrollWidth,
-            windowHeight: element.scrollHeight
+        // מיון ימים — אם יש שמות יום סטנדרטיים, ימיינו לפי סדר השבוע; אחרת נשאיר לפי מפתח
+        const days = Object.keys(schedule || {});
+        days.sort((a,b)=>{
+            const ia = dayOrder.indexOf(a);
+            const ib = dayOrder.indexOf(b);
+            if (ia !== -1 && ib !== -1) return ia - ib;
+            if (ia !== -1) return -1;
+            if (ib !== -1) return 1;
+            return a.localeCompare(b, 'he');
         });
-        const dataURL = canvas.toDataURL('image/png', 0.9);
-        const link = document.createElement('a');
-        link.download = `work-schedule-${getFormattedDate()}.png`;
-        link.href = dataURL;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } catch (error) {
-        console.error("שגיאה מפורטת:", error);
-        alert(`שגיאה בייצוא התמונה: ${error.message}`);
-    } finally {
-        document.body.style.direction = originalDirection;
-        document.body.style.textAlign = originalTextAlign;
-        btn.disabled = false;
-        btn.textContent = 'ייצוא כתמונה';
-        backBtn.style.display = 'inline-flex';
+
+        days.forEach(day => {
+            const dayDataRaw = schedule[day] || {};
+            // ננרמל מבנים שונים (מחרוזת/אובייקט/שדה חסר)
+            const map = arr => (Array.isArray(arr) ? arr.map(normalizeWorker).filter(Boolean) : []);
+            const runners = map(dayDataRaw.runners);
+            const waitersHall = map((dayDataRaw.waiters && dayDataRaw.waiters.hall) || []);
+            const waitersTerrace = map((dayDataRaw.waiters && dayDataRaw.waiters.terrace) || []);
+            const tastings = map(dayDataRaw.tastings);
+            const hostessHall = map((dayDataRaw.hostess && dayDataRaw.hostess.hall) || []);
+            const hostessTerrace = map((dayDataRaw.hostess && dayDataRaw.hostess.terrace) || []);
+
+            const addRole = (arr, roleClass) => arr.map(w => ({...w, roleClass}));
+            const allWorkers = [
+                ...addRole(runners, 'role-runners'),
+                ...addRole(waitersHall, 'role-waiters-hall'),
+                ...addRole(waitersTerrace, 'role-waiters-terrace'),
+                ...addRole(tastings, 'role-tastings'),
+                ...addRole(hostessHall, 'role-hostess-hall'),
+                ...addRole(hostessTerrace, 'role-hostess-terrace')
+            ];
+
+            if (allWorkers.length === 0) return; // אין שיבוצים ליום זה
+
+            hasAny = true;
+            const totalColumns = Math.ceil(allWorkers.length / MAX_PER_COLUMN) || 1;
+            for (let col = 0; col < totalColumns; col++) {
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'day-column';
+                const title = document.createElement('div');
+                title.className = 'day-title';
+                title.textContent = col === 0 ? day : `${day} - המשך ${col + 1}`;
+                dayColumn.appendChild(title);
+
+                if (dayDataRaw.arrivalTime) {
+                    const arrival = document.createElement('div');
+                    arrival.className = 'arrival-time';
+                    arrival.textContent = `שעת הגעה: ${dayDataRaw.arrivalTime}`;
+                    dayColumn.appendChild(arrival);
+                }
+
+                const ul = document.createElement('ul');
+                ul.className = 'worker-list';
+
+                const start = col * MAX_PER_COLUMN;
+                const end = start + MAX_PER_COLUMN;
+                const chunk = allWorkers.slice(start, end);
+                chunk.forEach(w => {
+                    const li = document.createElement('li');
+                    li.className = `worker-item ${w.roleClass}`;
+                    li.textContent = w.name;
+                    ul.appendChild(li);
+                });
+
+                dayColumn.appendChild(ul);
+                container.appendChild(dayColumn);
+            }
+        });
+
+        if (!hasAny) {
+            document.getElementById('no-data-message').style.display = 'block';
+            document.getElementById('exportImageButton').style.display = 'none';
+        } else {
+            // לחץ על הכפתור ייצא תמונה של כל ה-container
+            document.getElementById('exportImageButton').style.display = 'inline-flex';
+        }
     }
-});
-function getFormattedDate() {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${year}-${month}-${day}_${hours}-${minutes}`;
-}
-</script>
+
+    // --- ייצוא לתמונה ---
+    document.getElementById('exportImageButton').addEventListener('click', async function(){
+        if (typeof html2canvas === 'undefined') {
+            alert('html2canvas עדיין לא נטען. אנא המתן שניות ספורות ונסה שוב.');
+            return;
+        }
+        const exportBtn = this;
+        const backBtn = document.getElementById('backButton');
+        exportBtn.disabled = true;
+        exportBtn.textContent = 'מכין תמונה...';
+        backBtn.style.display = 'none';
+
+        const element = document.getElementById('capture');
+        try {
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#f8f9fa',
+                logging: false,
+                allowTaint: true,
+                foreignObjectRendering: false,
+                imageTimeout: 15000,
+                scrollX: 0,
+                scrollY: 0,
+                x: 0,
+                y: 0,
+                width: element.scrollWidth,
+                height: element.scrollHeight,
+                windowWidth: element.scrollWidth,
+                windowHeight: element.scrollHeight
+            });
+            const dataURL = canvas.toDataURL('image/png', 0.9);
+            const link = document.createElement('a');
+            link.download = `work-schedule-${getFormattedDate()}.png`;
+            link.href = dataURL;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            console.error('שגיאה ביצירת התמונה:', err);
+            alert('שגיאה בייצוא התמונה: ' + (err.message || err));
+        } finally {
+            exportBtn.disabled = false;
+            exportBtn.textContent = 'ייצוא כתמונה';
+            backBtn.style.display = 'inline-flex';
+        }
+    });
+
+    function getFormattedDate(){
+        const d = new Date();
+        const Y = d.getFullYear();
+        const M = String(d.getMonth()+1).padStart(2,'0');
+        const D = String(d.getDate()).padStart(2,'0');
+        const h = String(d.getHours()).padStart(2,'0');
+        const m = String(d.getMinutes()).padStart(2,'0');
+        return `${Y}-${M}-${D}_${h}-${m}`;
+    }
+    </script>
 </body>
 </html>
