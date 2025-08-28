@@ -1,22 +1,13 @@
-#capture { position: relative; overflow: visible; }<!DOCTYPE html>
-
+<!DOCTYPE html>
 <html lang="he">
-
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>סיכום סידור עבודה - לפי ימים</title>
 
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
-
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
-
 
 <script>
 // פונקציה לטעינת ספריות חיצוניות
@@ -55,459 +46,200 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 
-
 <style>
-
 :root {
-
     --primary-color: #007bff; --success-color: #28a745; --runner-bg: #28a745; --waiter-hall-bg: #38516d;
-
     --waiter-terrace-bg: #022346; --hostess-hall-bg: #96009b; --hostess-terrace-bg: #ff7fc7;
-
     --tastings-bg: #17a2b8; --light-gray: #f8f9fa; --text-color: #313e4b;
-
     --border-radius: 0.5rem; --shadow-md: 0 .5rem 1rem rgba(0,0,0,.15);
-
 }
-
 body { font-family: 'Rubik', sans-serif; direction: rtl; padding: 20px; background-color: var(--light-gray); color: var(--text-color); }
-
 .container { max-width: 95%; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-md); }
-
 h2 { text-align: center; margin-bottom: 20px; font-size: 2.2rem; font-weight: 700; }
-
 .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 30px; }
-
 .legend-item { display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 500; }
-
 .legend-color { width: 20px; height: 20px; border-radius: 4px; display: inline-block; }
-
 #scheduleByDayContainer { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 20px; }
-
 .day-column { flex: 1 1 220px; min-width: 220px; background-color: #f8f9fa; padding: 15px; border-radius: var(--border-radius); box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border: 1px solid #e9ecef; }
-
 .day-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; color: var(--primary-color); }
-
 .arrival-time { font-size: 1rem; font-weight: 500; color: #6c757d; margin-top: 0; margin-bottom: 15px; background-color: #fff; padding: 5px 10px; border-radius: 4px; border: 1px solid #dee2e6; }
-
 .worker-list { list-style: none; padding: 0; margin: 0; }
-
 .worker-item { padding: 10px 12px; margin-bottom: 8px; border-radius: 6px; font-weight: 500; color: white; font-size: 0.95rem; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-
 .role-runners { background-color: var(--runner-bg); }
-
 .role-waiters-hall { background-color: var(--waiter-hall-bg); }
-
 .role-waiters-terrace { background-color: var(--waiter-terrace-bg); }
-
 .role-hostess-hall { background-color: var(--hostess-hall-bg); }
-
 .role-hostess-terrace { background-color: var(--hostess-terrace-bg); color: #000; }
-
 .role-tastings { background-color: var(--tastings-bg); }
-
 #no-data-message { display: none; text-align: center; font-size: 1.2rem; padding: 40px; background-color: #fff3cd; color: #856404; border-radius: var(--border-radius); border: 1px solid #ffeaa7; }
-
 .navigation-buttons { text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-
 .nav-button { padding: 12px 25px; font-size: 1.1rem; color: #fff; border: none; border-radius: var(--border-radius); cursor: pointer; text-decoration: none; transition: all 0.2s ease; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-
 .nav-button:hover { filter: brightness(110%); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
-
 #backButton { background-color: var(--primary-color); }
-
 #exportImageButton { background-color: var(--success-color); opacity: 0.5; }
-
 .nav-button:disabled { background-color: #aaa; cursor: not-allowed; }
-
 @media (max-width: 768px) { body { padding: 10px; } .container { padding: 15px; } .navigation-buttons { flex-direction: column; align-items: center; } .nav-button { width: 80%; max-width: 300px; } }
-
 </style>
-
 </head>
-
 <body>
-
 <div id="capture">
-
     <div class="container">
-
         <h2>סיכום סידור עבודה - לפי ימים</h2>
-
         <div class="legend">
-
             <div class="legend-item"><span class="legend-color" style="background-color: var(--runner-bg);"></span>ראנר</div>
-
             <div class="legend-item"><span class="legend-color" style="background-color: var(--waiter-hall-bg);"></span>מלצר אולם</div>
-
             <div class="legend-item"><span class="legend-color" style="background-color: var(--waiter-terrace-bg);"></span>מלצר טרסה</div>
-
             <div class="legend-item"><span class="legend-color" style="background-color: var(--tastings-bg);"></span>טעימות</div>
-
             <div class="legend-item"><span class="legend-color" style="background-color: var(--hostess-hall-bg);"></span>מארחת אולם</div>
-
             <div class="legend-item"><span class="legend-color" style="background-color: var(--hostess-terrace-bg);"></span>מארחת טרסה</div>
-
         </div>
-
         <div id="scheduleByDayContainer"></div>
-
         <div id="no-data-message">
-
             <h3>אין נתוני שיבוץ</h3>
-
             <p>לא נמצא סידור עבודה שמור. יש לחזור לדף השיבוץ ולשבץ עובדים תחילה.</p>
-
         </div>
-
     </div>
-
 </div>
-
-
 <div class="navigation-buttons">
-
     <a href="main.html" id="backButton" class="nav-button">חזרה לדף השיבוץ</a>
-
     <button id="exportImageButton" class="nav-button">ייצוא כתמונה</button>
-
 </div>
-
 
 <script>
-
 document.addEventListener('DOMContentLoaded', () => {
-
-    // נתוני דוגמה לבדיקה - במקום sessionStorage
-
-    const sampleSchedule = {
-
-        'ראשון': {
-
-            arrivalTime: '16:00',
-
-            runners: [
-
-                {name: 'יוסי כהן'}, {name: 'דנה לוי'}, {name: 'רון אברהם'}
-
-            ],
-
-            waiters: {
-
-                hall: [
-
-                    {name: 'מיכל דוד'}, {name: 'עמית גולן'}, {name: 'שירה כהן'}
-
-                ],
-
-                terrace: [
-
-                    {name: 'אלון משה'}, {name: 'נועה רוזן'}
-
-                ]
-
-            },
-
-            hostess: {
-
-                hall: [{name: 'רחל אלון'}],
-
-                terrace: [{name: 'תמר יעקב'}]
-
-            },
-
-            tastings: [{name: 'אורי סלע'}]
-
-        },
-
-        'שני': {
-
-            arrivalTime: '17:30',
-
-            runners: [
-
-                {name: 'גיל נחום'}, {name: 'לירון בן דוד'}
-
-            ],
-
-            waiters: {
-
-                hall: [
-
-                    {name: 'עידו מלכה'}, {name: 'שני אוחנה'}
-
-                ],
-
-                terrace: [
-
-                    {name: 'רועי חזן'}
-
-                ]
-
-            },
-
-            hostess: {
-
-                hall: [{name: 'מור לביא'}],
-
-                terrace: []
-
-            },
-
-            tastings: [{name: 'נתן גרין'}]
-
-        }
-
-    };
-
-
-    // נסה לקבל נתונים מ-sessionStorage, אחרת השתמש בדוגמה
-
     let schedule;
-
     try {
-
-        const scheduleDataString = sessionStorage.getItem('workSchedule');
-
-        schedule = scheduleDataString ? JSON.parse(scheduleDataString) : sampleSchedule;
-
+        const scheduleDataString = localStorage.getItem('workSchedule'); // ✅ שימוש ב-localStorage
+        schedule = scheduleDataString ? JSON.parse(scheduleDataString) : null;
     } catch (error) {
-
-        console.log('משתמש בנתוני דוגמה');
-
-        schedule = sampleSchedule;
-
+        console.log('שגיאה בקריאת נתוני הסידור:', error);
+        schedule = null;
     }
-
 
     const container = document.getElementById('scheduleByDayContainer');
-
     const noDataMsg = document.getElementById('no-data-message');
-
     const exportButton = document.getElementById('exportImageButton');
-
     const dayOrder = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-
-    const MAX_PER_COLUMN = 30; // מגבלת עובדים לעמודה
-
+    const MAX_PER_COLUMN = 30; 
     let hasAssignments = false;
 
+    if (schedule) {
+        const sortedDays = Object.keys(schedule).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+        sortedDays.forEach(day => {
+            const dayData = schedule[day];
+            if (!dayData) return;
 
-    const sortedDays = Object.keys(schedule).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+            const mapWorker = w => ({ name: w.name });
+            const addRole = (workers, role) => workers.map(w => ({ ...mapWorker(w), role }));
 
+            const runners = addRole(dayData.runners || [], 'role-runners');
+            const waitersHall = addRole(dayData.waiters?.hall || [], 'role-waiters-hall');
+            const waitersTerrace = addRole(dayData.waiters?.terrace || [], 'role-waiters-terrace');
+            const tastings = addRole(dayData.tastings || [], 'role-tastings');
+            const hostessHall = addRole(dayData.hostess?.hall || [], 'role-hostess-hall');
+            const hostessTerrace = addRole(dayData.hostess?.terrace || [], 'role-hostess-terrace');
 
-    sortedDays.forEach(day => {
+            const allWorkers = [...runners, ...waitersHall, ...waitersTerrace, ...tastings, ...hostessHall, ...hostessTerrace];
 
-        const dayData = schedule[day];
-
-        if (!dayData) return;
-
-
-        const mapWorker = w => ({ name: w.name });
-
-        const addRole = (workers, role) => workers.map(w => ({ ...mapWorker(w), role }));
-
-
-        const runners = addRole(dayData.runners || [], 'role-runners');
-
-        const waitersHall = addRole(dayData.waiters?.hall || [], 'role-waiters-hall');
-
-        const waitersTerrace = addRole(dayData.waiters?.terrace || [], 'role-waiters-terrace');
-
-        const tastings = addRole(dayData.tastings || [], 'role-tastings');
-
-        const hostessHall = addRole(dayData.hostess?.hall || [], 'role-hostess-hall');
-
-        const hostessTerrace = addRole(dayData.hostess?.terrace || [], 'role-hostess-terrace');
-
-
-        const allWorkers = [...runners, ...waitersHall, ...waitersTerrace, ...tastings, ...hostessHall, ...hostessTerrace];
-
-
-        if (allWorkers.length > 0) {
-
-            hasAssignments = true;
-
-            const totalColumns = Math.ceil(allWorkers.length / MAX_PER_COLUMN);
-
-
-            for (let col = 0; col < totalColumns; col++) {
-
-                const dayColumn = document.createElement('div');
-
-                dayColumn.className = 'day-column';
-
-                
-
-                const dayTitle = document.createElement('h3');
-
-                dayTitle.className = 'day-title';
-
-                dayTitle.textContent = col === 0 ? day : `${day} - המשך ${col + 1}`;
-
-                dayColumn.appendChild(dayTitle);
-
-                
-
-                // הוסף שעת הגעה לכל עמודה של היום
-
-                if (dayData.arrivalTime) {
-
-                    const arrivalTimeEl = document.createElement('p');
-
-                    arrivalTimeEl.className = 'arrival-time';
-
-                    arrivalTimeEl.textContent = `שעת הגעה: ${dayData.arrivalTime}`;
-
-                    dayColumn.appendChild(arrivalTimeEl);
-
+            if (allWorkers.length > 0) {
+                hasAssignments = true;
+                const totalColumns = Math.ceil(allWorkers.length / MAX_PER_COLUMN);
+                for (let col = 0; col < totalColumns; col++) {
+                    const dayColumn = document.createElement('div');
+                    dayColumn.className = 'day-column';
+                    const dayTitle = document.createElement('h3');
+                    dayTitle.className = 'day-title';
+                    dayTitle.textContent = col === 0 ? day : `${day} - המשך ${col + 1}`;
+                    dayColumn.appendChild(dayTitle);
+                    if (dayData.arrivalTime) {
+                        const arrivalTimeEl = document.createElement('p');
+                        arrivalTimeEl.className = 'arrival-time';
+                        arrivalTimeEl.textContent = `שעת הגעה: ${dayData.arrivalTime}`;
+                        dayColumn.appendChild(arrivalTimeEl);
+                    }
+                    const workerList = document.createElement('ul');
+                    workerList.className = 'worker-list';
+                    const startIndex = col * MAX_PER_COLUMN;
+                    const endIndex = startIndex + MAX_PER_COLUMN;
+                    const workersInColumn = allWorkers.slice(startIndex, endIndex);
+                    workersInColumn.forEach(worker => {
+                        const li = document.createElement('li');
+                        li.className = `worker-item ${worker.role}`;
+                        li.textContent = worker.name;
+                        workerList.appendChild(li);
+                    });
+                    dayColumn.appendChild(workerList);
+                    container.appendChild(dayColumn);
                 }
-
-
-                const workerList = document.createElement('ul');
-
-                workerList.className = 'worker-list';
-
-
-                const startIndex = col * MAX_PER_COLUMN;
-
-                const endIndex = startIndex + MAX_PER_COLUMN;
-
-                const workersInColumn = allWorkers.slice(startIndex, endIndex);
-
-
-                workersInColumn.forEach(worker => {
-
-                    const li = document.createElement('li');
-
-                    li.className = `worker-item ${worker.role}`;
-
-                    li.textContent = worker.name;
-
-                    workerList.appendChild(li);
-
-                });
-
-
-                dayColumn.appendChild(workerList);
-
-                container.appendChild(dayColumn);
-
             }
-
-        }
-
-    });
-
-
-    if (!hasAssignments) {
-
-        noDataMsg.style.display = 'block';
-
-        exportButton.style.display = 'none';
-
+        });
     }
 
+    if (!hasAssignments) {
+        noDataMsg.style.display = 'block';
+        exportButton.style.display = 'none';
+    }
 });
 
-
-// --- ייצוא כתמונה באיכות גבוהה ---
-
+// --- ייצוא כתמונה ---
 document.getElementById('exportImageButton').addEventListener('click', async () => {
-    // בדוק אם html2canvas זמין
     if (typeof html2canvas === 'undefined') {
         alert('html2canvas עדיין לא נטען. אנא המתן מספר שניות ונסה שוב.');
         return;
     }
-
     const element = document.getElementById('capture');
     const btn = document.getElementById('exportImageButton');
     const backBtn = document.getElementById('backButton');
-    
     btn.disabled = true;
     btn.textContent = 'מכין תמונה...';
     backBtn.style.display = 'none';
-
-    // תיקון זמני לבעיית RTL - שנה כיוון לLTR בזמן הייצוא
     const originalDirection = document.body.style.direction;
     const originalTextAlign = document.body.style.textAlign;
-    
     try {
-        console.log('מתחיל ייצוא תמונה...');
-        
-        // שמור את הגלילה הנוכחית
-        const scrollX = window.scrollX || window.pageXOffset;
-        const scrollY = window.scrollY || window.pageYOffset;
-        
         const canvas = await html2canvas(element, { 
             scale: 2,
             useCORS: true,
             backgroundColor: '#f8f9fa',
             logging: false,
             allowTaint: true,
-            foreignObjectRendering: false, // משנים ל-false לבעיות RTL
+            foreignObjectRendering: false,
             imageTimeout: 15000,
-            scrollX: 0, // מאפס גלילה
+            scrollX: 0,
             scrollY: 0,
-            x: 0, // מתחיל מהתחלה
+            x: 0,
             y: 0,
-            width: element.scrollWidth, // גודל מלא
+            width: element.scrollWidth,
             height: element.scrollHeight,
             windowWidth: element.scrollWidth,
             windowHeight: element.scrollHeight
         });
-
-        console.log(`Canvas נוצר: ${canvas.width}x${canvas.height}`);
-        
-        // יצירת קובץ והורדה
         const dataURL = canvas.toDataURL('image/png', 0.9);
-        
         const link = document.createElement('a');
         link.download = `work-schedule-${getFormattedDate()}.png`;
         link.href = dataURL;
-        
-        // הוסף לדום, לחץ והסר
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
-        console.log('תמונה הורדה בהצלחה!');
-
     } catch (error) {
         console.error("שגיאה מפורטת:", error);
         alert(`שגיאה בייצוא התמונה: ${error.message}`);
     } finally {
-        // החזר את הכיוון המקורי
         document.body.style.direction = originalDirection;
         document.body.style.textAlign = originalTextAlign;
-        
         btn.disabled = false;
         btn.textContent = 'ייצוא כתמונה';
         backBtn.style.display = 'inline-flex';
     }
 });
-
-
 function getFormattedDate() {
-
     const date = new Date();
-
     const year = date.getFullYear();
-
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
-
     const day = date.getDate().toString().padStart(2, '0');
-
     const hours = date.getHours().toString().padStart(2, '0');
-
     const minutes = date.getMinutes().toString().padStart(2, '0');
-
     return `${year}-${month}-${day}_${hours}-${minutes}`;
-
 }
-
 </script>
-
 </body>
-
 </html>
