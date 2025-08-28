@@ -625,34 +625,123 @@
         backBtn.style.display = 'none';
 
         const element = document.getElementById('capture');
+        
+        // שמירת הסגנונות המקוריים
+        const originalBodyStyle = document.body.style.cssText;
+        const originalContainerStyle = element.style.cssText;
+        
         try {
+            // החלפה זמנית לסגנון פשוט לייצוא
+            document.body.style.cssText = `
+                background: #f0f4f8 !important;
+                font-family: 'Rubik', sans-serif;
+                direction: rtl;
+                padding: 20px;
+            `;
+            
+            element.style.cssText = `
+                background: white !important;
+                padding: 30px !important;
+                border-radius: 15px !important;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+                border: 2px solid #e2e8f0 !important;
+                backdrop-filter: none !important;
+            `;
+            
+            // וידוא שכל הכרטיסיות יהיו עם רקע לבן מוצק
+            const dayColumns = element.querySelectorAll('.day-column');
+            const originalColumnStyles = [];
+            dayColumns.forEach((col, index) => {
+                originalColumnStyles[index] = col.style.cssText;
+                col.style.cssText = `
+                    background: white !important;
+                    backdrop-filter: none !important;
+                    padding: 20px !important;
+                    border-radius: 12px !important;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+                    border: 1px solid #e2e8f0 !important;
+                    margin-bottom: 15px;
+                `;
+            });
+            
+            // וידוא שהכרטיסיות של העובדים יהיו עם הצבעים הנכונים
+            const workerItems = element.querySelectorAll('.worker-item');
+            const originalWorkerStyles = [];
+            workerItems.forEach((item, index) => {
+                originalWorkerStyles[index] = item.style.cssText;
+                // שמירה על מחלקת ה-CSS המקורית אבל עם background מפורש
+                if (item.classList.contains('role-runners')) {
+                    item.style.background = '#28a745 !important';
+                } else if (item.classList.contains('role-waiters-hall')) {
+                    item.style.background = '#38516d !important';
+                } else if (item.classList.contains('role-waiters-terrace')) {
+                    item.style.background = '#022346 !important';
+                } else if (item.classList.contains('role-tastings')) {
+                    item.style.background = '#17a2b8 !important';
+                } else if (item.classList.contains('role-hostess-hall')) {
+                    item.style.background = '#96009b !important';
+                } else if (item.classList.contains('role-hostess-terrace')) {
+                    item.style.background = '#ff7fc7 !important';
+                    item.style.color = '#2d3748 !important';
+                }
+                item.style.cssText += `
+                    color: white !important;
+                    font-weight: 600 !important;
+                    padding: 12px !important;
+                    border-radius: 8px !important;
+                    margin: 8px 0 !important;
+                    text-align: center !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+                `;
+                // תיקון מיוחד למארחת טרסה
+                if (item.classList.contains('role-hostess-terrace')) {
+                    item.style.color = '#2d3748 !important';
+                }
+            });
+
+            // המתנה קצרה לוידוא שהשינויים נכנסו לתוקף
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             const canvas = await html2canvas(element, {
                 scale: 2,
                 useCORS: true,
-                backgroundColor: '#f7fafc',
+                backgroundColor: '#f0f4f8',
                 logging: false,
-                allowTaint: true,
+                allowTaint: false,
                 foreignObjectRendering: false,
-                imageTimeout: 15000,
+                imageTimeout: 30000,
+                removeContainer: true,
                 scrollX: 0,
                 scrollY: 0,
-                x: 0,
-                y: 0,
-                width: element.scrollWidth,
-                height: element.scrollHeight,
-                windowWidth: element.scrollWidth,
-                windowHeight: element.scrollHeight
+                windowWidth: element.scrollWidth + 100,
+                windowHeight: element.scrollHeight + 100
             });
-            const dataURL = canvas.toDataURL('image/png', 0.9);
+            
+            // שחזור הסגנונות המקוריים
+            document.body.style.cssText = originalBodyStyle;
+            element.style.cssText = originalContainerStyle;
+            dayColumns.forEach((col, index) => {
+                col.style.cssText = originalColumnStyles[index];
+            });
+            workerItems.forEach((item, index) => {
+                item.style.cssText = originalWorkerStyles[index];
+            });
+            
+            const dataURL = canvas.toDataURL('image/png', 0.95);
             const link = document.createElement('a');
             link.download = `work-schedule-${getFormattedDate()}.png`;
             link.href = dataURL;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            
         } catch (err) {
             console.error('שגיאה ביצירת התמונה:', err);
             alert('שגיאה בייצוא התמונה: ' + (err.message || err));
+            
+            // שחזור הסגנונות המקוריים גם במקרה של שגיאה
+            document.body.style.cssText = originalBodyStyle;
+            element.style.cssText = originalContainerStyle;
         } finally {
             exportBtn.disabled = false;
             exportBtn.textContent = '📷 ייצוא כתמונה';
